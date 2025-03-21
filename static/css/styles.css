@@ -1,0 +1,597 @@
+body {
+    font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    margin: 0;
+    padding: 30px;
+    background-color: #f5f7fa;
+    color: #333;
+    line-height: 1.6;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #2c3e50;
+    font-weight: 600;
+    padding-bottom: 15px;
+    border-bottom: 3px solid #3498db;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.container {
+    display: flex;
+    gap: 25px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.upload-section {
+    flex: 1;
+    min-width: 300px;
+    padding: 25px;
+    border-radius: 12px;
+    background-color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.upload-section:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Thêm thanh progress hình ảnh */
+.upload-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 4px;
+    background-color: #3498db;
+    width: 0;
+    transition: width 0.3s ease;
+    border-radius: 12px 12px 0 0;
+}
+
+.results-section {
+    padding: 25px;
+    border-radius: 12px;
+    background-color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    margin-top: 30px;
+    transition: box-shadow 0.2s;
+}
+
+.results-section:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.results-container {
+    display: flex;
+    gap: 25px;
+    flex-wrap: wrap;
+}
+
+.results-column {
+    flex: 1;
+    min-width: 250px;
+}
+
+h2 {
+    margin-top: 0;
+    color: #2c3e50;
+    font-weight: 600;
+    border-bottom: 2px solid #e0e6ed;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+h3 {
+    color: #3498db;
+    font-weight: 500;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+    margin-top: 5px;
+}
+
+label {
+    display: block;
+    margin: 15px 0 5px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.file-requirement {
+    font-size: 13px;
+    color: #7f8c8d;
+    margin-top: 4px;
+    margin-bottom: 8px;
+    font-style: italic;
+}
+
+.file-requirement span {
+    color: #e74c3c;
+    font-weight: 500;
+}
+
+/* Cải tiến input file */
+.file-input-container {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.file-input-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border: 2px dashed #e0e6ed;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.file-input-label:hover {
+    border-color: #3498db;
+    background-color: #e8f4fc;
+}
+
+.file-input-label i {
+    margin-right: 8px;
+    font-size: 18px;
+}
+
+input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.selected-file {
+    display: flex;
+    align-items: center;
+    background-color: #e8f4fc;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 8px;
+    font-size: 14px;
+    border-left: 3px solid #3498db;
+}
+
+.selected-file .file-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.selected-file .remove-file {
+    color: #e74c3c;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+button {
+    background-color: #3498db;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    margin-right: 12px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+button i {
+    margin-right: 8px;
+}
+
+button:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+.upload-btn {
+    background-color: #2ecc71;
+}
+
+.upload-btn:hover {
+    background-color: #27ae60;
+}
+
+.process-btn {
+    background-color: #3498db;
+}
+
+.process-btn:hover {
+    background-color: #2980b9;
+}
+
+.refresh-btn {
+    background-color: #f39c12;
+    padding: 8px 16px;
+}
+
+.refresh-btn:hover {
+    background-color: #e67e22;
+}
+
+.button-group {
+    display: flex;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.error-message {
+    color: #e74c3c;
+    margin-top: 12px;
+    padding: 10px;
+    background-color: #ffeaea;
+    border-radius: 6px;
+    border-left: 3px solid #e74c3c;
+    display: none;
+}
+
+.success-message {
+    color: #2ecc71;
+    margin-top: 12px;
+    padding: 10px;
+    background-color: #e3f9ef;
+    border-radius: 6px;
+    border-left: 3px solid #2ecc71;
+    display: none;
+}
+
+/* Improved file list */
+.file-list {
+    list-style-type: none;
+    padding-left: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 15px;
+}
+
+.file-list li {
+    margin-bottom: 10px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 3px solid transparent;
+}
+
+.file-list li:hover {
+    background-color: #e8f4fc;
+    border-left-color: #3498db;
+}
+
+.file-list a {
+    text-decoration: none;
+    color: #3498db;
+    font-weight: 500;
+    flex: 1;
+    transition: color 0.2s;
+    word-break: break-word;
+}
+
+.file-list a:hover {
+    color: #2980b9;
+    text-decoration: underline;
+}
+
+.file-list small {
+    color: #7f8c8d;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+.file-list .download-icon {
+    margin-right: 8px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.file-list li:hover .download-icon {
+    opacity: 1;
+}
+
+.spinner {
+    display: none;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border-left-color: #3498db;
+    animation: spin 1s linear infinite;
+    margin-right: 12px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.process-btn-container {
+    display: flex;
+    align-items: center;
+}
+
+.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Toast notifications */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.toast {
+    padding: 15px 20px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    background-color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    animation: slideIn 0.3s forwards, fadeOut 0.3s 2.7s forwards;
+    max-width: 350px;
+}
+
+.toast.success {
+    border-left: 4px solid #2ecc71;
+}
+
+.toast.error {
+    border-left: 4px solid #e74c3c;
+}
+
+.toast-icon {
+    margin-right: 15px;
+    font-size: 20px;
+}
+
+.toast.success .toast-icon {
+    color: #2ecc71;
+}
+
+.toast.error .toast-icon {
+    color: #e74c3c;
+}
+
+.toast-message {
+    flex: 1;
+}
+
+.toast-close {
+    margin-left: 15px;
+    cursor: pointer;
+    color: #7f8c8d;
+    transition: color 0.2s;
+}
+
+.toast-close:hover {
+    color: #34495e;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+/* Tooltip */
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip .tooltip-text {
+    visibility: hidden;
+    width: 200px;
+    background-color: #34495e;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 8px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+    }
+
+    .results-container {
+        flex-direction: column;
+    }
+
+    .button-group {
+        flex-direction: column;
+    }
+
+    button {
+        width: 100%;
+        margin-bottom: 10px;
+        margin-right: 0;
+    }
+
+    body {
+        padding: 20px 15px;
+    }
+
+    h1 {
+        font-size: 24px;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+
+    h2 {
+        font-size: 20px;
+    }
+
+    h3 {
+        font-size: 18px;
+    }
+
+    .upload-section, .results-section {
+        padding: 20px 15px;
+    }
+
+    .file-list li {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .file-list small {
+        margin-left: 0;
+        margin-top: 5px;
+    }
+
+    .toast-container {
+        width: calc(100% - 40px);
+        right: 20px;
+    }
+
+    .toast {
+        max-width: 100%;
+    }
+}
+
+/* Additional breakpoint for very small devices */
+@media (max-width: 480px) {
+    body {
+        padding: 15px 10px;
+    }
+
+    h1 {
+        font-size: 22px;
+        padding-bottom: 8px;
+        margin-bottom: 15px;
+    }
+
+    h2 {
+        font-size: 18px;
+    }
+
+    h3 {
+        font-size: 16px;
+    }
+
+    .upload-section, .results-section {
+        padding: 15px 12px;
+        min-width: auto;
+    }
+
+    .results-column {
+        min-width: 100%;
+    }
+
+    label {
+        font-size: 14px;
+    }
+
+    .file-requirement {
+        font-size: 12px;
+    }
+
+    input[type="file"] {
+        padding: 6px;
+    }
+
+    button {
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+
+    .process-btn-container {
+        width: 100%;
+    }
+
+    .spinner {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+/* Improve file input usability on mobile */
+@media (max-width: 768px) {
+    .file-input-label {
+        padding: 15px 10px;
+    }
+
+    /* Adjust container spacing */
+    .container {
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .results-container {
+        gap: 15px;
+    }
+}
+
+/* Fix for mobile Safari issues with file inputs */
+@supports (-webkit-touch-callout: none) {
+    input[type="file"] {
+        padding: 8px;
+        background-color: #fff;
+    }
+}

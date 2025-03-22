@@ -73,11 +73,13 @@ def run_and_check_download(folder_path_download, _file_import, destination_dir):
     view_name_text = view_name.text
 
     # Check if it contains '*'
+    _count = 0
     while '*' not in view_name_text:
         time.sleep(5)
+        _count += 5
         view_name_text = view_name.text
-        print(view_name_text)
-
+        print(_count)
+    time.sleep(5)
     btn_download = wait.until(
         EC.presence_of_element_located(
             (By.CSS_SELECTOR, "span.MicrosoftOffice-symbol"))

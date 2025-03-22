@@ -1,9 +1,11 @@
-import pandas as pd
-import connection as conn
 import os
-from decimal import Decimal
-from fileConfig import _dtypeSample
 from datetime import datetime
+from decimal import Decimal
+
+import pandas as pd
+
+import connection as conn
+from fileConfig import _dtypeSample
 
 
 def load_sample_file(_file_import, _file_lo, _file_tc):
@@ -17,7 +19,7 @@ def load_sample_file(_file_import, _file_lo, _file_tc):
     _tableSample.replace({pd.NA: "", float('nan'): "", float(
         'inf'): "", float('-inf'): ""}, inplace=True)
 
-    _filterRows = pd.read_excel(_file_lo, sheet_name='213001')
+    _filterRows = pd.read_excel(_file_lo, sheet_name=1)
     _tableLOAvg = pd.read_excel(_file_lo, sheet_name=2)
     _tableTC = pd.read_excel(_file_tc, sheet_name='Page 1')
 
@@ -72,11 +74,10 @@ def load_sample_file(_file_import, _file_lo, _file_tc):
         'inf'): "", float('-inf'): ""}, inplace=True)
     _mergedTable = _mergedTable.drop_duplicates()
 
-
     # _jsonDataSample = _mergedTable.to_json(orient='records', date_format='iso', indent=4)
 
     _resultImport = conn.import_json_to_db(_mergedTable)
-    _mergedTable.drop(columns=['TABLETYPE','CREATEDBY'], inplace=True)
+    _mergedTable.drop(columns=['TABLETYPE', 'CREATEDBY'], inplace=True)
     output_path = r'C:\Users\Admin\Downloads\Check price\Check price\Result\Sample\Updated_Sample_{}.xlsx'.format(
         datetime.now().strftime('%Y%m%d%H%M%S')
     )

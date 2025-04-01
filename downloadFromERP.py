@@ -51,6 +51,10 @@ def run_and_check_download(folder_path_download, _file_import, destination_dir):
 
     time.sleep(5)
 
+    date_begin = wait.until(
+        EC.presence_of_element_located((By.XPATH, "//input[@id='SalesLine_SalesNum_3_0_0_input']"))
+    )
+
     sales_order = wait.until(
         EC.presence_of_element_located((By.CSS_SELECTOR, "#SalesLine_SalesNum_3_0_header > .dyn-headerCellLabel"))
     )
@@ -71,15 +75,16 @@ def run_and_check_download(folder_path_download, _file_import, destination_dir):
     )
 
     view_name_text = view_name.text
+    date_begin_text = date_begin.get_attribute("value")
 
     # Check if it contains '*'
     _count = 0
-    while '*' not in view_name_text:
+    while '*' not in view_name_text and date_begin.get_attribute("value") == date_begin_text:
         time.sleep(5)
         _count += 5
         view_name_text = view_name.text
         print(_count)
-    time.sleep(5)
+    time.sleep(15)
     btn_download = wait.until(
         EC.presence_of_element_located(
             (By.CSS_SELECTOR, "span.MicrosoftOffice-symbol"))
@@ -116,7 +121,7 @@ def run_and_check_download(folder_path_download, _file_import, destination_dir):
 
         time.sleep(10)
 
-# result = run_and_check_download(r"C:\Users\Admin\Downloads\Check price\Check price\Result\Old\Sample20250305084736\Down"
-#                                 ,r'C:\Users\Admin\Downloads\Check price\Check price\Result\Old\FolderBulk20250305080356\Copy of WEEKLY SHIPMENT ADIDAS 2025--shipment mar.xlsx'
-#                                 ,r'C:\Users\Admin\Downloads\Check price\Check price\Bulk')
+# result = run_and_check_download(r"C:\Compare\Result\Old\Sample20250305084736\Down"
+#                                 ,r'C:\Compare\Result\Old\FolderBulk20250305080356\Copy of WEEKLY SHIPMENT ADIDAS 2025--shipment mar.xlsx'
+#                                 ,r'C:\Compare\Bulk')
 # print(result)

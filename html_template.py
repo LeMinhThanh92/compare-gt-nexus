@@ -1,6 +1,7 @@
 def generate_html_template(sample_result_files, bulk_result_files):
     """Generate the HTML template for the home page with modern UI/UX"""
-
+    sample_result_files.sort(key=lambda x: x[1], reverse=True)
+    sample_result_files = sample_result_files[:5]
     # Generate HTML lists with file names and dates
     sample_result_html = "".join(
         f'<div class="result-item">'

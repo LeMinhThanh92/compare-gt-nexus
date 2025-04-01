@@ -40,8 +40,14 @@ def load_sample_file(_file_import, _file_lo, _file_tc):
 
     # _filteredSelection.loc[:,'FOB'] = _filteredSelection['FOB'] * value
 
-    _filteredSelectionTC = _tableTC[['Working Number', 'Price Per Unit']].copy()
-    _filteredSelectionTC.rename(columns={'Working Number': 'STYLE', 'Price Per Unit': 'TCFOB'}, inplace=True)
+    _filteredSelectionTC = _tableTC[['PO Number', 'Price Per Unit']].copy()
+    _filteredSelectionTC.rename(columns={'PO Number': 'PO', 'Price Per Unit': 'TCFOB'}, inplace=True)
+
+    _tableSample['ORDERNO'] = _tableSample['ORDERNO'].apply(
+        lambda x: '0' + str(x) if len(str(x)) == 9 else str(x)
+    )
+    _tableSample['ORDERNO'] = _tableSample['ORDERNO'].astype(str)
+    _filteredSelectionTC['PO'] = _filteredSelectionTC['PO'].astype(str)
 
     _mergedTable = pd.merge(_tableSample,
                             _filteredSelection,
@@ -61,11 +67,11 @@ def load_sample_file(_file_import, _file_lo, _file_tc):
 
     _mergedTable = pd.merge(_mergedTable,
                             _filteredSelectionTC,
-                            left_on='WORKNO',
-                            right_on='STYLE',
+                            left_on='ORDERNO',
+                            right_on='PO',
                             how='left')
 
-    _mergedTable.drop(columns=['STYLE'], inplace=True)
+    _mergedTable.drop(columns=['PO'], inplace=True)
     _mergedTable['TCFOB'] = _mergedTable['TCFOB'].apply(lambda x: Decimal(x).quantize(Decimal('0.00')))
     _mergedTable['Result'] = abs((_mergedTable['FOB'] - _mergedTable['TCFOB']) / _mergedTable['TCFOB'] * 100)
     _mergedTable['Result'] = _mergedTable['Result'].apply(lambda x: Decimal(x).quantize(Decimal('0.00')))
@@ -78,7 +84,7 @@ def load_sample_file(_file_import, _file_lo, _file_tc):
 
     _resultImport = conn.import_json_to_db(_mergedTable)
     _mergedTable.drop(columns=['TABLETYPE', 'CREATEDBY'], inplace=True)
-    output_path = r'C:\Users\Admin\Downloads\Check price\Check price\Result\Sample\Updated_Sample_{}.xlsx'.format(
+    output_path = r'C:\Compare\Result\Sample\Updated_Sample_{}.xlsx'.format(
         datetime.now().strftime('%Y%m%d%H%M%S')
     )
     _mergedTable.to_excel(output_path, index=False)

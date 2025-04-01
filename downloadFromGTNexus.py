@@ -1,17 +1,20 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select
-import time
-from dateutil.relativedelta import relativedelta
-import pandas as pd
-from fileConfig import _dtypeSample
+import calendar
 import os
 import shutil
-import calendar
-def run_and_check_download(folder_path_download,_file_import,destination_dir):
+import time
+
+import pandas as pd
+from dateutil.relativedelta import relativedelta
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support.ui import WebDriverWait
+
+from fileConfig import _dtypeSample
+
+
+def run_and_check_download(folder_path_download, _file_import, destination_dir):
     options = webdriver.EdgeOptions()
     prefs = {"download.default_directory": folder_path_download}
     options.add_experimental_option("prefs", prefs)
@@ -31,10 +34,15 @@ def run_and_check_download(folder_path_download,_file_import,destination_dir):
     min_date = pd.Timestamp(_tableSample['CUSTREQDATE'].min())
     max_date = pd.Timestamp(_tableSample['CUSTREQDATE'].max())
     min_date = min_date.replace(day=1).strftime('%Y-%m-%d')
-    last_day = calendar.monthrange(max_date.year, max_date.month)[1]
-    max_date = max_date.replace(day=last_day).strftime('%Y-%m-%d')
+    next_month = max_date.month + 2
+    year_offset = max_date.year + (next_month - 1) // 12
+    next_month = (next_month - 1) % 12 + 1  # Ensure month is between 1-12
 
-    first_day_minus_6_months = (_tableSample['CUSTREQDATE'].max() - relativedelta(months=6)).replace(day=1).strftime(
+    # Get the last day of that month
+    last_day = calendar.monthrange(year_offset, next_month)[1]
+    max_date = max_date.replace(year=year_offset, month=next_month, day=last_day).strftime('%Y-%m-%d')
+
+    first_day_minus_6_months = (_tableSample['CUSTREQDATE'].max() - relativedelta(months=5)).replace(day=1).strftime(
         '%Y-%m-%d')
     url = "https://network.infornexus.com/en/trade/ReportRun.jsp?key=357945647677#"
     driver.get(url)
@@ -61,21 +69,32 @@ def run_and_check_download(folder_path_download,_file_import,destination_dir):
     seller_party = Select(select_elements[0])
     seller_party.select_by_index(2)
 
-    script = """
-    var parentSpan = document.querySelector('.partysearch-onelineinnerdiv');
-    parentSpan.innerHTML = '';
+    select_party = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located(
+            (By.XPATH, "//span[@class='gwt-InlineHTML partysearch-onelineinnerdiv']/i[text()='Select a party']"))
+    )
+    select_party.click()
 
-    var newTag = document.createElement('b');
-    newTag.textContent = 'WELLCORP HOLDINGS TRADING HK LIMITED(213)';
-    parentSpan.appendChild(newTag);
+    select_party_value = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located(
+            (By.XPATH, "//a[@class='gwt-Anchor' and text()='5717-9890-1825-2755']"))
+    )
+    select_party_value.click()
 
-    var newSpan = document.createElement('span');
-    newSpan.className = 'orgid';
-    newSpan.textContent = '5717-9890-1825-2755';
-    parentSpan.appendChild(newSpan);
-    """
-    driver.execute_script(script)
-
+    # script = """
+    # var parentSpan = document.querySelector('.partysearch-onelineinnerdiv');
+    # parentSpan.innerHTML = '';
+    #
+    # var newTag = document.createElement('b');
+    # newTag.textContent = 'WELLCORP HOLDINGS TRADING HK LIMITED(213)';
+    # parentSpan.appendChild(newTag);
+    #
+    # var newSpan = document.createElement('span');
+    # newSpan.className = 'orgid';
+    # newSpan.textContent = '5717-9890-1825-2755';
+    # parentSpan.appendChild(newSpan);
+    # """
+    # driver.execute_script(script)
     po_delivery_date = Select(select_elements[3])
     po_delivery_date.select_by_index(8)
     ele = driver.find_elements(By.CSS_SELECTOR, ".valuewidgetdatebox")
@@ -90,7 +109,7 @@ def run_and_check_download(folder_path_download,_file_import,destination_dir):
     ele[2].send_keys(min_date)
     ele[3].clear()
     ele[3].send_keys(max_date)
-
+    time.sleep(2)
     issue_date = Select(select_elements[8])
     issue_date.select_by_index(8)
     ele = driver.find_elements(By.CSS_SELECTOR, ".valuewidgetdatebox")
@@ -98,6 +117,11 @@ def run_and_check_download(folder_path_download,_file_import,destination_dir):
     ele[4].send_keys(first_day_minus_6_months)
     ele[5].clear()
     ele[5].send_keys(max_date)
+    time.sleep(2)
+    option3 = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.XPATH, "//input[@id='navbarsearch']"))
+    )
+    option3.click()
 
     devision = Select(select_elements[9])
     devision.select_by_index(3)
@@ -106,7 +130,8 @@ def run_and_check_download(folder_path_download,_file_import,destination_dir):
     Select(devision_select).deselect_all()
 
     option1 = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.XPATH, "//option[text()='02']"))
+        # EC.presence_of_element_located((By.XPATH, "//option[text()='02']"))
+        EC.element_to_be_clickable((By.XPATH, "//option[@value='02']"))
     )
     option1.click()
 
@@ -120,11 +145,11 @@ def run_and_check_download(folder_path_download,_file_import,destination_dir):
         EC.presence_of_element_located((By.XPATH, "//option[text()='Sample']"))
     )
     option1.click()
-
+    time.sleep(2)
     button = driver.find_element(By.XPATH, "//button[text()='Run']")
     button.click()
 
-    # destination_dir = r'C:\Users\Admin\Downloads\Check price\Check price\Sample'
+    # destination_dir = r'C:\Compare\Sample'
     while True:
         files = os.listdir(folder_path_download)
         matching_files = [file for file in files if "adidas+Released+Order" in file]
@@ -141,9 +166,7 @@ def run_and_check_download(folder_path_download,_file_import,destination_dir):
 
         time.sleep(10)
 
-# result = run_and_check_download(r"C:\Users\Admin\Downloads\Check price\Check price\Result\Old\Sample20250305084736\Down"
-#                                 ,r'C:\Users\Admin\Downloads\Check price\Check price\Result\Old\Sample20250305084736\Import sales order original template- Monthly.xlsx'
-#                                 ,r'C:\Users\Admin\Downloads\Check price\Check price\Sample')
+# result = run_and_check_download(r"C:\Compare\Result\Old\Sample20250305084736\Down"
+#                                 ,r'C:\Compare\Result\Old\Sample20250305084736\Import sales order original template- Monthly.xlsx'
+#                                 ,r'C:\Compare\Sample')
 # print(result)
-
-

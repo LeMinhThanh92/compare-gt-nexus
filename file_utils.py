@@ -22,7 +22,7 @@ def get_result_files(folder_path):
     return [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
 
 
-def get_result_files_by_date(folder_path):
+def get_result_files_by_date(folder_path, top_num):
     """Get files from a folder ordered by modification date (newest first) with timestamps."""
     if not os.path.exists(folder_path):
         return []
@@ -41,7 +41,7 @@ def get_result_files_by_date(folder_path):
     files_with_info.sort(key=lambda x: datetime.strptime(x[1], '%Y-%m-%d %H:%M:%S'), reverse=True)
 
     # Return only the top 10 results
-    return files_with_info[:10]
+    return files_with_info[:top_num]
 
 
 def save_uploaded_files(files_dict, destination_folder):

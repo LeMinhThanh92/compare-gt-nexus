@@ -1,3 +1,4 @@
+import asyncio
 import os
 
 from fastapi import FastAPI, File, UploadFile
@@ -18,10 +19,10 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Define the folder paths
-FOLDER_PATH_SAMPLE = r'C:\Users\Admin\Downloads\Check price\Check price\Sample'
-FOLDER_PATH_BULK = r'C:\Users\Admin\Downloads\Check price\Check price\Bulk'
-FOLDER_PATH_RESULT_SAMPLE = r'C:\Users\Admin\Downloads\Check price\Check price\Result\Sample'
-FOLDER_PATH_RESULT_BULK = r'C:\Users\Admin\Downloads\Check price\Check price\Result\Bulk'
+FOLDER_PATH_SAMPLE = r'C:\Compare\Sample'
+FOLDER_PATH_BULK = r'C:\Compare\Bulk'
+FOLDER_PATH_RESULT_SAMPLE = r'C:\Compare\Result\Sample'
+FOLDER_PATH_RESULT_BULK = r'C:\Compare\Result\Bulk'
 
 # Create directories if they don't exist
 for path in [FOLDER_PATH_SAMPLE, FOLDER_PATH_BULK, FOLDER_PATH_RESULT_SAMPLE, FOLDER_PATH_RESULT_BULK]:
@@ -46,8 +47,8 @@ FILE_PATTERNS = {
 async def home():
     """Returns an HTML page with a split screen file upload form."""
     # Get current result files, ordered by modification date
-    sample_result_files = get_result_files_by_date(FOLDER_PATH_RESULT_SAMPLE)
-    bulk_result_files = get_result_files_by_date(FOLDER_PATH_RESULT_BULK)
+    sample_result_files = get_result_files_by_date(FOLDER_PATH_RESULT_SAMPLE, 5)
+    bulk_result_files = get_result_files_by_date(FOLDER_PATH_RESULT_BULK, 10)
 
     return generate_html_template(sample_result_files, bulk_result_files)
 
@@ -56,8 +57,8 @@ async def home():
 async def get_result_files_api():
     """Get all result files from both Sample and Bulk result folders."""
     try:
-        sample_files = get_result_files_by_date(FOLDER_PATH_RESULT_SAMPLE)
-        bulk_files = get_result_files_by_date(FOLDER_PATH_RESULT_BULK)
+        sample_files = get_result_files_by_date(FOLDER_PATH_RESULT_SAMPLE, 5)
+        bulk_files = get_result_files_by_date(FOLDER_PATH_RESULT_BULK, 10)
         return {
             "sample_files": sample_files,
             # "sample_files": [file[0] for file in sample_files],
@@ -207,6 +208,9 @@ async def process_sample_files_api():
             status_code=500,
             content={"detail": f"Error processing sample files: {str(e)}"}
         )
+
+
+bulk_process_semaphore = asyncio.Semaphore(1)
 
 
 @app.post("/process-bulk-files/")

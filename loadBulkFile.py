@@ -1,26 +1,41 @@
-import pandas as pd
-import connection as conn
 from datetime import datetime
+
+import pandas as pd
+
+import connection as conn
 from fileConfig import _dtypeBulk
-def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly, _file_erp):
+
+
+def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly, _file_erp, _file_tc):
     _tableBulk = pd.read_excel(_file_import
                                , dtype=_dtypeBulk
                                , sheet_name='Sheet1'
                                )
     _tableBulk["TABLETYPE"]: int = 2
     _tableBulk["CREATEDBY"]: str = "AD"
-    _tableSS=pd.read_excel(_file_season_ss,sheet_name='Sheet1')
+    _tableSS = pd.read_excel(_file_season_ss, sheet_name='Sheet1')
     _tableSS = _tableSS[_tableSS['Factory Group Code (MF)'] == '213001'].copy()
-    _tableFW=pd.read_excel(_file_season_fw,sheet_name='Sheet1')
+    _tableFW = pd.read_excel(_file_season_fw, sheet_name='Sheet1')
     _tableFW = _tableFW[_tableFW['Factory Group Code (MF)'] == '213001'].copy()
-    _tableWeekly=pd.read_excel(_file_weekly,sheet_name='MAR 2025')
-    _tableErp=pd.read_excel(_file_erp,sheet_name='Sheet1')
+    _tableWeekly = pd.read_excel(_file_weekly, sheet_name='MAR 2025')
+    _tableErp = pd.read_excel(_file_erp, sheet_name='Sheet1')
+    _tableTC = pd.read_excel(_file_tc, sheet_name='Page 1')
+
+    _filteredSelectionTC = _tableTC[
+        ['PO Number', 'Price Per Unit', 'Technical Size', 'Article Number', 'Working Number']].copy()
+    _filteredSelectionTC.rename(
+        columns={'PO Number': 'PO', 'Price Per Unit': 'PriceTC', 'Technical Size': 'Size', 'Article Number': 'Article',
+                 'Working Number': 'Style'},
+        inplace=True)
+    _filteredSelectionTC['PO'] = _filteredSelectionTC['PO'].astype(str)
+    _filteredSelectionTC['Size'] = _filteredSelectionTC['Size'].astype(str)
 
     _tableBulk.replace({pd.NA: "", float('nan'): "", float(
         'inf'): "", float('-inf'): ""}, inplace=True)
 
     _tableBulk = _tableBulk.drop_duplicates()
-#---Update FOB in import file bulk
+
+    # ---Update FOB in import file bulk
 
     def update_fob_usa(row):
         row['PLANDATE'] = pd.to_datetime(row['PLANDATE'], errors='coerce')
@@ -43,27 +58,27 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
             return row['FACPRICE'] * (price_map[country][0] if month >= 9 or month <= 2 else price_map[country][1])
         return row['FACPRICE']
 
-    _tableBulk['FOBPRICE']=_tableBulk.apply(update_fob_usa, axis=1)
+    _tableBulk['FOBPRICE'] = _tableBulk.apply(update_fob_usa, axis=1)
 
-    _resultImport=conn.import_json_to_db(_tableBulk)
+    _resultImport = conn.import_json_to_db(_tableBulk)
     print('Import Bulk Complete') if _resultImport else print('Import Bulk Errors')
 
-    output_path = r'C:\Users\Admin\Downloads\Check price\Check price\Result\Bulk\Updated_Bulk_{}.xlsx'.format(
+    output_path = r'C:\Compare\Result\Bulk\Updated_Bulk_{}.xlsx'.format(
         datetime.now().strftime('%Y%m%d%H%M%S')
     )
     _tableBulk.to_excel(output_path, index=False)
     print(f"{datetime.now()} - Success Bulk. File saved to: {output_path}")
-#---filter weekly file current month +1 ---filter weekly file
+    # ---filter weekly file current month +1 ---filter weekly file
     _now = datetime.today()
     _currentMonth = _now.month
+
     # _currentYear = _now.year
     # # _currentMonth = (_now.month % 12)
     # # _currentYear = _now.year + (_currentMonth == 1)
     # _tableWeekly['Schedule ex.Factory'] = pd.to_datetime(_tableWeekly['Schedule ex.Factory'], errors='coerce')
     # _filterRow=_tableWeekly[_tableWeekly['Schedule ex.Factory'].dt.month == _currentMonth].copy()
 
-
-#--filter file season
+    # --filter file season
     def get_filtered_table(df):
         return df[
             (df['Costsheet Status (C)'].str.contains('Confirmed', case=False, na=False)) &
@@ -79,7 +94,7 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
     _tableSeason = get_filtered_table(_tableSS if is_spring_summer_primary else _tableFW)
     _tableSeason1 = get_filtered_table(_tableFW if is_spring_summer_primary else _tableSS)
 
-#--Get the necessary columns in weekly, season and erp
+    # --Get the necessary columns in weekly, season and erp
     column_maps = {
         'weekly': {
             'columns': ['Style No/', 'Article Number', 'PO'],
@@ -90,8 +105,9 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
                         'Item number', 'Color', 'Style', 'Size', 'Quantity', 'Unit price', 'Fact price (Unit price)']
         },
         'season': {
-            'columns': ['Working Number (M)', 'Intl. FOB (C)','Intl. Asian FOB (C)', 'Article Number (A)', 'Sizes within Size Group (C)'],
-            'rename': {'Working Number (M)': 'Style', 'Intl. FOB (C)': 'Price','Intl. Asian FOB (C)' : 'PriceA',
+            'columns': ['Working Number (M)', 'Intl. FOB (C)', 'Intl. Asian FOB (C)', 'Article Number (A)',
+                        'Sizes within Size Group (C)'],
+            'rename': {'Working Number (M)': 'Style', 'Intl. FOB (C)': 'Price', 'Intl. Asian FOB (C)': 'PriceA',
                        'Article Number (A)': 'Article', 'Sizes within Size Group (C)': 'Size'}
         }
     }
@@ -106,11 +122,11 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
 
     _filteredSeason1 = _tableSeason1[column_maps['season']['columns']].rename(
         columns=column_maps['season']['rename']).copy()
-#---Merged table
+    # ---Merged table
     _mergedTable = pd.merge(_filteredWeekly,
                             _filteredSeason,
-                            left_on=['Style','Article'],
-                            right_on=['Style','Article'],
+                            left_on=['Style', 'Article'],
+                            right_on=['Style', 'Article'],
                             how='left')
 
     _missingRows = _mergedTable[_mergedTable['Price'].isnull()]
@@ -125,14 +141,13 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
 
         _mergedTable = pd.concat([_mergedTable[~_mergedTable['Price'].isnull()], filled_rows])
 
-
     _expandedTable = (
         _mergedTable
         .assign(Size=_mergedTable['Size'].str.split(','))
         .explode('Size')
     )
 
-    _expandedTable.rename(columns={'Style': 'Style1'},inplace=True)
+    _expandedTable.rename(columns={'Style': 'Style1'}, inplace=True)
 
     _expandedTable['FinalPrice'] = _expandedTable.apply(
         lambda row: row['PriceA_y'] if 'A' in str(row['Size']) and pd.isnull(row['PriceA']) else
@@ -142,10 +157,8 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
     )
     _expandedTable = _expandedTable.drop(columns=['Price', 'PriceA', 'PriceA_x', 'PriceA_y'], errors='ignore')
 
-    _expandedTable = _expandedTable.rename(columns={'FinalPrice': 'Price'})
+    _expandedTable = _expandedTable.rename(columns={'FinalPrice': 'PriceLineSheet'})
     _expandedTable.reset_index(drop=True, inplace=True)
-
-
 
     _filteredErp['Customer reference'] = _filteredErp['Customer reference'].apply(
         lambda x: '0' + str(x) if len(str(x)) == 9 else str(x)
@@ -155,19 +168,27 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
     _tableMergedErp = pd.merge(
         _filteredErp,
         _expandedTable,
-        left_on=['Item number', 'Color', 'Size','Customer reference'],
-        right_on=['Style1', 'Article', 'Size','PO'],
+        left_on=['Item number', 'Color', 'Size', 'Customer reference'],
+        right_on=['Style1', 'Article', 'Size', 'PO'],
         how='left'
     )
-
-    # output_path = r'C:\Users\Admin\Downloads\Check price\Check price\Result\Bulk\size.xlsx'.format(
+    _tableMergedErpTC = pd.merge(
+        _tableMergedErp,
+        _filteredSelectionTC,
+        left_on=['Item number', 'Color', 'Size', 'Customer reference'],
+        right_on=['Style', 'Article', 'Size', 'PO'],
+        how='left'
+    )
+    # output_path = r'C:\Compare\Result\Bulk\size.xlsx'.format(
     #     datetime.now().strftime('%Y%m%d%H%M%S')
     # )
     # _filteredErp.to_excel(output_path, index=False)
     # print(f"{datetime.now()} - Success Bulk. File saved to: {output_path}")
 
-    _tableMergedErp.drop(columns=['Style1', 'Article','PO'], inplace=True)
-    _tableMergedErp = _tableMergedErp[~_tableMergedErp['Item number'].str.contains('ZRV', na=False)]
-    _tableMergedErp['Result'] = _tableMergedErp.apply(lambda row: 'Match' if row['Fact price (Unit price)'] == row['Price'] else 'Mismatch',axis=1)
+    _tableMergedErpTC.drop(columns=['Style1', 'Article_x', 'PO_x', 'PO_y', 'Article_y', 'Style_y'], inplace=True)
+    _tableMergedErpTC = _tableMergedErpTC[~_tableMergedErpTC['Item number'].str.contains('ZRV', na=False)]
+    _tableMergedErpTC['Result'] = _tableMergedErpTC.apply(
+        lambda row: 'Match' if row['Fact price (Unit price)'] == row['PriceTC'] == row['PriceLineSheet']
+        else 'Mismatch', axis=1)
 
-    return _tableMergedErp
+    return _tableMergedErpTC

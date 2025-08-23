@@ -30,10 +30,11 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: -apple-system, "Poppins Medium", BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     background-color: var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.6;
+    padding: 20px;
 }
 
 .container {
@@ -193,35 +194,110 @@ body {
 
 /* File Requirements */
 .file-requirements {
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-white);
     border-radius: var(--rounded);
-    padding: 16px;
+    padding: 24px;
     margin-bottom: 16px;
     font-size: 14px;
+    box-shadow: var(--shadow);
+}
+
+.file-requirements h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text-primary);
 }
 
 .file-requirements ul {
     list-style-type: none;
-    margin-top: 8px;
+    margin-top: 12px;
+    margin-bottom: 20px;
 }
 
 .file-requirements li {
-    margin-bottom: 6px;
+    margin-bottom: 12px;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    background-color: var(--bg-secondary);
+    padding: 12px;
+    border-radius: var(--rounded);
+    border-left: 4px solid var(--primary-color);
 }
 
 .file-requirements li::before {
-    content: '•';
-    color: var(--primary-color);
-    font-weight: bold;
-    display: inline-block;
-    width: 16px;
+    content: '📋';
+    font-size: 16px;
+    margin-right: 12px;
+    margin-top: 2px;
+}
+
+.file-info {
+    flex: 1;
+}
+
+.filename-req {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.sheet-info {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    padding-left: 8px;
+    border-left: 2px solid var(--border-color);
 }
 
 .highlight {
     color: var(--danger-color);
+    font-weight: 600;
+    background-color: rgba(239, 68, 68, 0.1);
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+.sheet-name {
+    color: var(--primary-color);
     font-weight: 500;
+    background-color: rgba(59, 130, 246, 0.1);
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+.optional-section {
+    border-top: 1px solid var(--border-color);
+    padding-top: 20px;
+    margin-top: 20px;
+}
+
+.optional-section li {
+    border-left-color: var(--warning-color);
+}
+
+.optional-section li::before {
+    content: '📋';
+}
+
+.section-badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: var(--rounded-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.required-badge {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.optional-badge {
+    background-color: var(--warning-color);
+    color: white;
 }
 
 /* Selected Files */
@@ -256,10 +332,11 @@ body {
 }
 
 .file-name {
-    font-weight: 500;
+    font-weight: 400;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: small;
 }
 
 .file-invalid .file-name {
@@ -455,10 +532,6 @@ body {
     flex: 1;
 }
 
-.file-info {
-    margin-left: 12px;
-}
-
 .file-date {
     font-size: 12px;
     color: var(--text-tertiary);
@@ -598,6 +671,14 @@ body {
 
 /* Responsive Adjustments */
 @media (max-width: 640px) {
+    body {
+        padding: 10px;
+    }
+
+    .container {
+        max-width: 800px;
+    }
+
     .app-header h1 {
         font-size: 20px;
     }
@@ -626,5 +707,9 @@ body {
     .btn {
         padding: 8px 12px;
         font-size: 14px;
+    }
+
+    .file-requirements {
+        padding: 16px;
     }
 }

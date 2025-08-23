@@ -1,143 +1,180 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select
-import time
-import os
+from typing import List
+
 import pandas as pd
-from fileConfig import _dtypeSample
-from dateutil.relativedelta import relativedelta
-import shutil
-def run_and_check_download():
-    options = webdriver.EdgeOptions()
-    download_dir = r"C:\Users\Admin\Downloads\Check price\Check price\Result\Old\Sample20250305084736\Down"
-    prefs = {"download.default_directory": download_dir}
-    options.add_experimental_option("prefs", prefs)
-    options.add_experimental_option("detach", True)
-    # options.add_argument("--headless")
-    # options.add_argument("--disable-gpu")
-    # options.add_argument("--window-size=1920x1080")
-    driver = webdriver.Edge(options=options)
-    _file_import=r'C:\Users\Admin\Downloads\Check price\Check price\Result\Old\Sample20250305084736\Import sales order original template- Monthly.xlsx'
-    _tableSample = pd.read_excel(_file_import
-                             , dtype=_dtypeSample
-                             , sheet_name='Sheet1'
-                             )
-    _tableSample['CUSTREQDATE'] = pd.to_datetime(_tableSample['CUSTREQDATE'], errors='coerce')
+import sqlalchemy
 
-    min_date = _tableSample['CUSTREQDATE'].min().strftime('%Y-%m-%d')
-    max_date = _tableSample['CUSTREQDATE'].max().strftime('%Y-%m-%d')
-    first_day_minus_6_months = (_tableSample['CUSTREQDATE'].max() - relativedelta(months=6)).replace(day=1).strftime('%Y-%m-%d')
-    url = "https://network.infornexus.com/en/trade/ReportRun.jsp?key=357945647677#"
-    driver.get(url)
 
-    username_field = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "login"))
+def get_db_engine245():
+    """Create database engine for SQL Server connection"""
+    connection_url = sqlalchemy.engine.URL.create(
+        "mssql+pyodbc",
+        query={
+            "odbc_connect": (
+                "DRIVER=SQL Server;"
+                "SERVER=192.168.1.245;"
+                "DATABASE=HR;"
+                "UID=user_prog2;"
+                "PWD=qrOZW$v6e1MT;"
+                "TrustServerCertificate=yes;"
+            )
+        }
     )
-    username_field.send_keys("213001_T&A")
+    return sqlalchemy.create_engine(connection_url)
 
-    password_field = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "password"))
-    )
-    password_field.send_keys("a1ateam@123")
 
-    login_button = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.ID, "loginButton"))
-    )
-    login_button.click()
+def process_excel_to_chunks(file_path: str, chunk_size: int = 700) -> List[str]:
+    df = pd.read_excel(file_path, sheet_name=0)
 
-    time.sleep(5)
+    so_list = df['SO'].dropna().astype(str).unique()
 
-    select_elements = driver.find_elements(By.CLASS_NAME, "predicateoperator")
+    formatted_so = [f"('{so}')" for so in so_list]
 
-    seller_party = Select(select_elements[0])
-    seller_party.select_by_index(2)
+    # Create chunks
+    chunks = []
+    for i in range(0, len(formatted_so), chunk_size):
+        chunk_values = ",".join(formatted_so[i:i + chunk_size])
+        insert_statement = f"INSERT INTO #ItemFilter (SALESID)\nVALUES {chunk_values};"
+        chunks.append(insert_statement)
 
-    script = """
-    var parentSpan = document.querySelector('.partysearch-onelineinnerdiv');
-    parentSpan.innerHTML = '';
-    
-    var newTag = document.createElement('b');
-    newTag.textContent = 'WELLCORP HOLDINGS TRADING HK LIMITED(213)';
-    parentSpan.appendChild(newTag);
-    
-    var newSpan = document.createElement('span');
-    newSpan.className = 'orgid';
-    newSpan.textContent = '5717-9890-1825-2755';
-    parentSpan.appendChild(newSpan);
+    return chunks
+
+
+def get_temp_table_creation_sql() -> str:
+    return "CREATE TABLE #ItemFilter (SALESID NVARCHAR(20));"
+
+
+def get_main_query_sql() -> str:
+    return """
+SELECT 
+    b.SALESID AS 'Sales order',
+    b.PURCHORDERFORMNUM AS 'Customer requisition',
+    b.CUSTOMERREF AS 'Customer reference',
+    b.ITEMID AS 'Item number',
+    b.SALESQTY AS 'Quantity',
+    b.SALESPRICE AS 'Unit price',
+    b.ECCFACTPRICE AS 'Fact price (Unit price)',
+    a.TRX_POLAT AS 'PO Line Aggregator',
+    a.ECCSALESORDERTYPEID AS 'Sales order type',
+    CASE 
+        WHEN a.SALESSTATUS = 0 THEN 'Done'
+        WHEN a.SALESSTATUS = 1 THEN 'Open order'
+        WHEN a.SALESSTATUS = 2 THEN 'Delivered'
+        WHEN a.SALESSTATUS = 3 THEN 'Invoiced'
+        WHEN a.SALESSTATUS = 4 THEN 'Canceled' 
+    END AS 'Status',
+    a.ECP2SALESREMARKS AS 'Remark',
+    c.INVENTCOLORID AS 'Color',
+    c.INVENTSIZEID AS 'Size',
+    c.INVENTSTYLEID AS 'Style'
+FROM 
+    [192.168.70.115].AxDB.dbo.SALESTABLE AS a
+INNER JOIN 
+    [192.168.70.115].AxDB.dbo.SALESLINE AS b
+    ON a.SALESID = b.SALESID AND a.DATAAREAID = b.DATAAREAID AND a.PARTITION = b.PARTITION
+INNER JOIN 
+    [192.168.70.115].AxDB.dbo.INVENTDIM AS c
+    ON b.INVENTDIMID = c.INVENTDIMID AND b.DATAAREAID = c.DATAAREAID AND b.PARTITION = c.PARTITION
+INNER JOIN 
+    #ItemFilter AS d ON a.SALESID = d.SALESID
+WHERE 
+    a.DATAAREAID = 'a1a'
+    AND c.INVENTSTYLEID <> ''
+    AND a.PARTITION = 5637144576;
+drop table #ItemFilter    
+"""
+
+
+def execute_complete_query(file_path: str, chunk_size: int = 700) -> pd.DataFrame:
     """
-    driver.execute_script(script)
+    Execute the complete workflow: create temp table, insert data, run main query
 
-    po_delivery_date = Select(select_elements[3])
-    po_delivery_date.select_by_index(8)
-    ele = driver.find_elements(By.CSS_SELECTOR, ".valuewidgetdatebox")
-    ele[0].clear()
-    ele[0].send_keys(min_date)
-    ele[1].clear()
-    ele[1].send_keys(max_date)
-    po_s_delivery_date = Select(select_elements[4])
-    po_s_delivery_date.select_by_index(8)
-    ele = driver.find_elements(By.CSS_SELECTOR, ".valuewidgetdatebox")
-    ele[2].clear()
-    ele[2].send_keys(min_date)
-    ele[3].clear()
-    ele[3].send_keys(max_date)
+    Args:
+        file_path: Path to Excel file
+        chunk_size: Number of items per chunk
 
-    issue_date = Select(select_elements[8])
-    issue_date.select_by_index(8)
-    ele = driver.find_elements(By.CSS_SELECTOR, ".valuewidgetdatebox")
-    ele[4].clear()
-    ele[4].send_keys(first_day_minus_6_months)
-    ele[5].clear()
-    ele[5].send_keys(max_date)
+    Returns:
+        DataFrame with query results
+    """
+    engine = get_db_engine245()
 
-    devision = Select(select_elements[9])
-    devision.select_by_index(3)
-    devision_select = driver.find_element(By.ID, "gwt_uid_35")
-    devision_select.click()
-    Select(devision_select).deselect_all()
+    try:
+        with engine.connect() as conn:
+            # Start transaction
+            trans = conn.begin()
 
-    option1 = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.XPATH, "//option[text()='02']"))
-    )
-    option1.click()
+            try:
+                # 1. Create temp table
+                conn.execute(sqlalchemy.text(get_temp_table_creation_sql()))
+                print("✓ Temporary table created")
 
-    order = Select(select_elements[10])
-    order.select_by_index(3)
-    order_select = driver.find_element(By.ID, "gwt_uid_36")
-    order_select.click()
-    Select(order_select).deselect_all()
+                # 2. Insert data in chunks
+                insert_chunks = process_excel_to_chunks(file_path, chunk_size)
 
-    option1 = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.XPATH, "//option[text()='Sample']"))
-    )
-    option1.click()
+                for i, chunk in enumerate(insert_chunks, 1):
+                    conn.execute(sqlalchemy.text(chunk))
+                    print(f"✓ Chunk {i}/{len(insert_chunks)} inserted")
 
-    button = driver.find_element(By.XPATH, "//button[text()='Run']")
-    button.click()
+                # 3. Execute main query
+                main_query = get_main_query_sql()
+                result = pd.read_sql(main_query, conn)
 
-    destination_dir = r'C:\Users\Admin\Downloads\Check price\Check price\Sample'
-    while True:
-        files = os.listdir(download_dir)
-        matching_files = [file for file in files if "adidas+Released+Order" in file]
+                print(f"✓ Query completed. Retrieved {len(result)} rows")
 
-        if matching_files:
-            for file in matching_files:
-                source_path = os.path.join(download_dir, file)
-                destination_path = os.path.join(destination_dir, file)
+                # Commit transaction
+                trans.commit()
 
-                shutil.move(source_path, destination_path)
-                print(f"Moved file: {file} to {destination_dir}")
-            return
+                return result
 
-        time.sleep(30)
+            except Exception as e:
+                trans.rollback()
+                raise e
 
-result = run_and_check_download()
-print(result)
+    except Exception as e:
+        print(f"Error: {e}")
+        raise
 
 
+def preview_chunks(file_path: str, chunk_size: int = 700) -> None:
+    try:
+        chunks = process_excel_to_chunks(file_path, chunk_size)
+
+        print(f"File: {file_path}")
+        print(f"Total chunks: {len(chunks)}")
+        print(f"Chunk size: {chunk_size}")
+        print("-" * 50)
+
+        for i, chunk in enumerate(chunks, 1):
+            print(f"--- Chunk {i} ---")
+            # Show first 200 characters of each chunk
+            preview = chunk[:200] + "..." if len(chunk) > 200 else chunk
+            print(preview)
+            print()
+
+    except Exception as e:
+        print(f"Error reading file: {e}")
 
 
+def get_so_count(file_path: str) -> int:
+    try:
+        df = pd.read_excel(file_path, sheet_name=0)
+        unique_count = df['SO'].dropna().nunique()
+        return unique_count
+    except Exception as e:
+        print(f"Error reading file: {e}")
+        return 0
 
+
+file_path = r'C:\Compare\testWeekly.xlsx'
+
+print("=== PREVIEW ===")
+preview_chunks(file_path)
+
+so_count = get_so_count(file_path)
+print(f"Total unique SO values: {so_count}")
+
+print("\n=== EXECUTING QUERY ===")
+results = execute_complete_query(file_path)
+print(f"Results shape: {results.shape}")
+print(results.head())
+output_path = r'C:\Compare\testWeekly01re.xlsx'
+results.to_excel(output_path, index=False)

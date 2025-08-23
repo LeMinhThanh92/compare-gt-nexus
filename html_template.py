@@ -2,6 +2,7 @@ def generate_html_template(sample_result_files, bulk_result_files):
     """Generate the HTML template for the home page with modern UI/UX"""
     sample_result_files.sort(key=lambda x: x[1], reverse=True)
     sample_result_files = sample_result_files[:5]
+
     # Generate HTML lists with file names and dates
     sample_result_html = "".join(
         f'<div class="result-item">'
@@ -62,10 +63,8 @@ def generate_html_template(sample_result_files, bulk_result_files):
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css">
 </head>
 <body>
-    <!-- Toast Notifications Container -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- Header -->
     <header class="app-header">
         <div class="container">
             <h1>Price Check File Upload System</h1>
@@ -74,16 +73,13 @@ def generate_html_template(sample_result_files, bulk_result_files):
 
     <main class="container">
         <div class="app-card">
-            <!-- Tab Navigation -->
             <div class="tabs">
                 <button class="tab-btn active" data-tab="upload">Upload Files</button>
                 <button class="tab-btn" data-tab="results">Result Files</button>
             </div>
 
-            <!-- Upload Tab Content -->
             <div class="tab-content active" id="upload-tab">
                 <div class="upload-container">
-                    <!-- Sample Files Section -->
                     <div class="upload-section">
                         <div class="section-header">
                             <h2><i class="fas fa-vial"></i> Sample Files</h2>
@@ -101,16 +97,26 @@ def generate_html_template(sample_result_files, bulk_result_files):
                         </div>
 
                         <div class="file-requirements">
-                            <p><strong>Required Files:</strong></p>
+                            <h3>File Requirements</h3>
+                            <span class="section-badge required-badge">Required</span>
                             <ul>
-                                <li>File 1: Must contain "<span class="highlight">Import sales order</span>" in filename</li>
-                                <li>File 2: Must contain "<span class="highlight">pricelist</span>" in filename</li>
+                                <li>
+                                    <div class="file-info">
+                                        <div class="filename-req">File 1: Must contain "<span class="highlight">Import sales order</span>" in filename</div>
+                                        <div class="sheet-info">Expected sheet: <span class="sheet-name">Name: Sheet1</span></div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="file-info">
+                                        <div class="filename-req">File 2: Must contain "<span class="highlight">pricelist</span>" in filename</div>
+                                        <div class="sheet-info">Expected sheet: <span class="sheet-name">The Second,Third Sheet</span> </div>
+                                    </div>
+                                </li>
                             </ul>
                         </div>
 
                         <div class="selected-files" id="sample-selected-files">
-                            <!-- Files will be added here via JavaScript -->
-                        </div>
+                            </div>
 
                         <div class="action-buttons">
                             <button type="button" id="sample-upload-btn" class="btn primary-btn" onclick="uploadSampleFiles()">
@@ -123,7 +129,6 @@ def generate_html_template(sample_result_files, bulk_result_files):
                         </div>
                     </div>
 
-                    <!-- Bulk Files Section -->
                     <div class="upload-section">
                         <div class="section-header">
                             <h2><i class="fas fa-database"></i> Bulk Files</h2>
@@ -141,18 +146,50 @@ def generate_html_template(sample_result_files, bulk_result_files):
                         </div>
 
                         <div class="file-requirements">
-                            <p><strong>Required Files:</strong></p>
+                            <h3>File Requirements</h3>
+                            <span class="section-badge required-badge">Required</span>
                             <ul>
-                                <li>File 1: Must contain "<span class="highlight">Import sales order</span>" in filename</li>
-                                <li>File 2: Must contain "<span class="highlight">SS</span>" and "<span class="highlight">Final all</span>" in filename</li>
-                                <li>File 3: Must contain "<span class="highlight">FW</span>" and "<span class="highlight">Final all</span>" in filename</li>
-                                <li>File 4: Must contain "<span class="highlight">WEEKLY</span>" in filename</li>
+                                <li>
+                                    <div class="file-info">
+                                        <div class="filename-req">File 1: Must contain "<span class="highlight">Import sales order</span>" in filename</div>
+                                        <div class="sheet-info">Expected sheet: <span class="sheet-name">Name: Sheet1</span></div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="file-info">
+                                        <div class="filename-req">File 2: Must contain "<span class="highlight">SS</span>" and "<span class="highlight">Final all</span>" in filename</div>
+                                        <div class="sheet-info">Expected sheet: <span class="sheet-name">Name: Sheet1</span></div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="file-info">
+                                        <div class="filename-req">File 3: Must contain "<span class="highlight">FW</span>" and "<span class="highlight">Final all</span>" in filename</div>
+                                        <div class="sheet-info">Expected sheet: <span class="sheet-name">Name: Sheet1</span></div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="file-info">
+                                        <div class="filename-req">File 4: Must contain "<span class="highlight">WEEKLY</span>" in filename</div>
+                                        <div class="sheet-info">Expected sheet: <span class="sheet-name">The First Sheet</span></div>
+                                    </div>
+                                </li>
                             </ul>
+
+                            <div class="optional-section">
+                                <span class="section-badge optional-badge">Optional</span>
+                                <ul>
+                                    <li>
+                                        <div class="file-info">
+                                            <div class="filename-req">File 5: Must contain "<span class="highlight">_3rd</span>" and "<span class="highlight">Final all</span>" in filename</div>
+                                            <div class="sheet-info">Expected sheet: <span class="sheet-name">Name: Sheet1</span></div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
 
                         <div class="selected-files" id="bulk-selected-files">
-                            <!-- Files will be added here via JavaScript -->
-                        </div>
+                            </div>
 
                         <div class="action-buttons">
                             <button type="button" id="bulk-upload-btn" class="btn primary-btn" onclick="uploadBulkFiles()">
@@ -167,7 +204,6 @@ def generate_html_template(sample_result_files, bulk_result_files):
                 </div>
             </div>
 
-            <!-- Results Tab Content -->
             <div class="tab-content" id="results-tab">
                 <div class="results-container">
                     <div class="results-header">
@@ -181,21 +217,21 @@ def generate_html_template(sample_result_files, bulk_result_files):
                         <div class="results-section">
                             <h3><i class="fas fa-vial"></i> Sample Results</h3>
                             <div class="results-list" id="sample-result-files">
-                                ${sample_result_html}
+                                {sample_result_html}
                             </div>
                         </div>
 
                         <div class="results-section">
                             <h3><i class="fas fa-exchange-alt"></i> Bulk Compare Results</h3>
                             <div class="results-list" id="bulk-compare-result-files">
-                                ${bulk_compare_html}
+                                {bulk_compare_html}
                             </div>
                         </div>
 
                         <div class="results-section">
                             <h3><i class="fas fa-edit"></i> Bulk Updated Results</h3>
                             <div class="results-list" id="bulk-updated-result-files">
-                                ${bulk_updated_html}
+                                {bulk_updated_html}
                             </div>
                         </div>
                     </div>

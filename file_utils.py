@@ -2,6 +2,12 @@ import os
 import shutil
 from datetime import datetime
 
+import pandas as pd
+from openpyxl import load_workbook
+from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.table import Table, TableStyleInfo
+
 
 def validate_filename(filename, patterns):
     """
@@ -78,3 +84,38 @@ def check_required_files_exist(folder_path, required_files):
                 required_files.remove((patterns, file_desc))
 
     return [file_desc for _, file_desc in required_files]
+
+
+def export_to_excel_with_table(result_bulk: pd.DataFrame, output_path: str):
+    # Step 1: Save the DataFrame to Excel
+    result_bulk.to_excel(output_path, index=False)
+
+    # Step 2: Load the workbook and worksheet
+    wb = load_workbook(output_path)
+    ws = wb.active
+
+    # Step 3: Define table range (e.g., A1:C10)
+    max_row = ws.max_row
+    max_col = ws.max_column
+    end_col_letter = get_column_letter(max_col)
+    table_range = f"A1:{end_col_letter}{max_row}"
+
+    # Step 4: Create a table
+    table = Table(displayName="DataTable", ref=table_range)
+    style = TableStyleInfo(
+        name="TableStyleLight13",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Step 5: Set white font for header row
+    for col in range(1, max_col + 1):
+        cell = ws.cell(row=1, column=col)
+        cell.font = Font(color="FFFFFF", bold=True)
+
+    # Step 6: Save the workbook
+    wb.save(output_path)

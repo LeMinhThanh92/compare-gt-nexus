@@ -1,8 +1,8 @@
 import sqlalchemy
 from sqlalchemy import text
 
-def get_db_engine():
 
+def get_db_engine():
     connection_url = sqlalchemy.engine.URL.create(
         "mssql+pyodbc",
         query={
@@ -19,8 +19,24 @@ def get_db_engine():
     return sqlalchemy.create_engine(connection_url)
 
 
-def run_query(engine, query, params=None):
+def get_db_engine245():
+    connection_url = sqlalchemy.engine.URL.create(
+        "mssql+pyodbc",
+        query={
+            "odbc_connect": (
+                "DRIVER=SQL Server;"
+                "SERVER=192.168.1.245;"
+                "DATABASE=HR;"
+                "UID=prog2;"
+                "PWD=qrOZW$v6e1MT;"
+                "TrustServerCertificate=yes;"
+            )
+        }
+    )
+    return sqlalchemy.create_engine(connection_url)
 
+
+def run_query(engine, query, params=None):
     params = params or {}
     with engine.begin() as connection:
         result = connection.execute(query, params)
@@ -28,7 +44,6 @@ def run_query(engine, query, params=None):
 
 
 def import_json_to_db(table):
-
     engine = get_db_engine()
 
     json_data = table.to_json(orient='records', date_format='iso', indent=4)
@@ -37,4 +52,3 @@ def import_json_to_db(table):
     row_count = run_query(engine, query_string, {"json": json_data})
 
     return True if row_count > 0 else False
-

@@ -8,7 +8,8 @@ const filePatterns = {
         {pattern: ["Import sales order"], id: "import", label: "Import File"},
         {pattern: ["SS", "Final all"], id: "ss", label: "LineSheet SS File"},
         {pattern: ["FW", "Final all"], id: "fw", label: "LineSheet FW File"},
-        {pattern: ["WEEKLY"], id: "weekly", label: "Weekly File"}
+        {pattern: ["WEEKLY"], id: "weekly", label: "Weekly File"},
+        {pattern: ["_3rd", "Final all"], id: "_3rd", label: "LineSheet_3 File"}
     ]
 };
 
@@ -126,25 +127,28 @@ function detectFileCategory(fileName, type) {
     fileName = fileName.toLowerCase();
     const patterns = filePatterns[type];
 
-    // More specific patterns should be checked first
-    // FW vs SS detection needs special handling for LineSheet files
     if (type === 'bulk') {
-        if (fileName.includes('fw')) {
-            return patterns.find(p => p.id === 'fw');
-        } else if (fileName.includes('ss')) {
-            return patterns.find(p => p.id === 'ss');
+        if (fileName.includes('final all')) {
+            if (fileName.includes('fw') && !fileName.includes('_3rd')) {
+                return patterns.find(p => p.id === 'fw');
+            } else if (fileName.includes('ss') && !fileName.includes('_3rd')) {
+                return patterns.find(p => p.id === 'ss');
+            } else if (fileName.includes('_3rd')) {
+                return patterns.find(p => p.id === '_3rd');
+            }
         }
     }
 
-    // Regular pattern matching for other files
+    // Generic fallback pattern matching
     for (let i = 0; i < patterns.length; i++) {
-        if (patterns[i].pattern.some(pattern => fileName.includes(pattern.toLowerCase()))) {
+        if (patterns[i].pattern.every(pattern => fileName.includes(pattern.toLowerCase()))) {
             return patterns[i];
         }
     }
 
     return null;
 }
+
 
 // Display selected files in the UI
 function displaySelectedFiles(files, type) {
@@ -224,10 +228,20 @@ function validateFiles(type) {
         return false;
     }
 
-    // Check if we have all required file types
-    const hasAllRequiredTypes = requiredPatterns.every(pattern => {
+    let patternsToValidate = requiredPatterns;
+    if (type === 'bulk') {
+        // Extract the required patterns (all except the 'test' file which is the fifth one)
+        patternsToValidate = requiredPatterns.filter(pattern => pattern.id !== '_3rd');
+    }
+
+    const hasAllRequiredTypes = patternsToValidate.every(pattern => {
         return fileObj[pattern.id] !== undefined;
     });
+
+    // // Check if we have all required file types
+    // const hasAllRequiredTypes = requiredPatterns.every(pattern => {
+    //     return fileObj[pattern.id] !== undefined;
+    // });
 
     // Update UI based on validation
     uploadBtn.disabled = !hasAllRequiredTypes;

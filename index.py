@@ -17,7 +17,7 @@ from html_template import generate_html_template
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
+os.system("cls")
 # Define the folder paths
 FOLDER_PATH_SAMPLE = r'C:\Compare\Sample'
 FOLDER_PATH_BULK = r'C:\Compare\Bulk'
@@ -38,7 +38,8 @@ FILE_PATTERNS = {
         "excel_path_bulk": ["Import sales order"],
         "excel_path_lineSheet_SS": ["SS", "Final all"],
         "excel_path_lineSheet_FW": ["FW", "Final all"],
-        "excel_path_weekly": ["WEEKLY"]
+        "excel_path_weekly": ["WEEKLY"],
+        "excel_path_test": ["_3rd", "Final all"],
     }
 }
 
@@ -141,19 +142,27 @@ async def upload_bulk_files(
         bulk_file1: UploadFile = File(...),
         bulk_file2: UploadFile = File(...),
         bulk_file3: UploadFile = File(...),
-        bulk_file4: UploadFile = File(...)
+        bulk_file4: UploadFile = File(...),
+        bulk_file5: UploadFile = None  # Changed to directly use None to make it optional
 ):
     """Handles bulk file uploads and saves them in the Bulk folder."""
     try:
+        # Initialize validation list with required files
+        validation_files = [
+            (bulk_file1, FILE_PATTERNS["bulk"]["excel_path_bulk"], "Bulk File 1"),
+            (bulk_file2, FILE_PATTERNS["bulk"]["excel_path_lineSheet_SS"], "Bulk File 2"),
+            (bulk_file3, FILE_PATTERNS["bulk"]["excel_path_lineSheet_FW"], "Bulk File 3"),
+            (bulk_file4, FILE_PATTERNS["bulk"]["excel_path_weekly"], "Bulk File 4"),
+        ]
+
+        # Only validate the fifth file if it was provided
+        if bulk_file5 is not None:
+            validation_files.append(
+                (bulk_file5, FILE_PATTERNS["bulk"]["excel_path_test"], "Bulk File 5")
+            )
+
         # Validate file names
-        validation_result = validate_uploaded_files(
-            [
-                (bulk_file1, FILE_PATTERNS["bulk"]["excel_path_bulk"], "Bulk File 1"),
-                (bulk_file2, FILE_PATTERNS["bulk"]["excel_path_lineSheet_SS"], "Bulk File 2"),
-                (bulk_file3, FILE_PATTERNS["bulk"]["excel_path_lineSheet_FW"], "Bulk File 3"),
-                (bulk_file4, FILE_PATTERNS["bulk"]["excel_path_weekly"], "Bulk File 4")
-            ]
-        )
+        validation_result = validate_uploaded_files(validation_files)
 
         if validation_result:
             return JSONResponse(status_code=400, content={"detail": validation_result})
@@ -162,8 +171,12 @@ async def upload_bulk_files(
             "bulk_file1": bulk_file1,
             "bulk_file2": bulk_file2,
             "bulk_file3": bulk_file3,
-            "bulk_file4": bulk_file4
+            "bulk_file4": bulk_file4,
         }
+
+        # Only add the fifth file to the files dictionary if it was provided
+        if bulk_file5 is not None:
+            files["bulk_file5"] = bulk_file5
 
         save_uploaded_files(files, FOLDER_PATH_BULK)
         return {"message": "Bulk files uploaded successfully!"}

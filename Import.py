@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import io
 import os
 import shutil
@@ -67,19 +68,21 @@ def get_file_paths(_folder_path, file_conditions):
     paths = {key: None for key in file_conditions}
 
     try:
-        filenames = [f for f in os.listdir(_folder_path) if os.path.isfile(os.path.join(_folder_path, f))]
+        with os.scandir(_folder_path) as entries:
+            for entry in entries:
+                if not entry.is_file():
+                    continue
+                filename = entry.name
+                file_path = entry.path
 
-        for filename in filenames:
-            file_path = os.path.join(_folder_path, filename)
-
-            for key, condition in file_conditions.items():
-                if all(substring in filename for substring in condition):
-                    # Special handling for SS and FW to exclude _3rd files
-                    if key in ["excel_path_lineSheet_SS", "excel_path_lineSheet_FW"]:
-                        if "_3rd" not in filename:
+                for key, condition in file_conditions.items():
+                    if all(substring in filename for substring in condition):
+                        # Special handling for SS and FW to exclude _3rd files
+                        if key in ["excel_path_lineSheet_SS", "excel_path_lineSheet_FW"]:
+                            if "_3rd" not in filename:
+                                paths[key] = file_path
+                        else:
                             paths[key] = file_path
-                    else:
-                        paths[key] = file_path
 
         return paths
 
@@ -88,7 +91,7 @@ def get_file_paths(_folder_path, file_conditions):
         return {"error": f"Error: {e}"}
 
 
-def process_sample_files(mode = 'A1A'):
+def process_sample_files(mode='A1A'):
     _check = False
     output_path = None
     output_dataframe = None
@@ -124,9 +127,6 @@ def process_sample_files(mode = 'A1A'):
                 # result_sample.to_excel(output_path, index=False)
                 print(result_sample)
                 export_to_excel_with_table(result_sample, output_path)
-
-                # Wait for file to be written completely
-                time.sleep(2)
 
                 print(f"{datetime.now()} - Success Sample. File saved to: {output_path}")
 
@@ -166,7 +166,7 @@ def process_sample_files(mode = 'A1A'):
                 r"C:\Compare\Result\Download"
                 , sample_paths['import_path']
                 , r'C:\Compare\Sample'
-                ,mode)
+                , mode)
             print(f"{datetime.now()} - Complete") if result else print(f"{datetime.now()} - Failed")
 
         else:
@@ -206,7 +206,6 @@ def process_bulk_files():
         excel_path_erp = bulk_paths.get('excel_path_erp')
         excel_path_tc = bulk_paths.get('excel_path_tc')
 
-
         if are_paths_valid(bulk_paths, optional_keys=optional_keys):
             try:
                 result_bulk, result_bulk_update = loadBulkNew.load_bulk_file(
@@ -225,12 +224,12 @@ def process_bulk_files():
                 output_path = os.path.join(output_dir, f"Compare_Price_{timestamp}.xlsx")
                 output_path_update = os.path.join(output_dir, f"Updated_Bulk_{timestamp}.xlsx")
 
-                # result_bulk.to_excel(output_path, index=False)
-                export_to_excel_with_table(result_bulk, output_path)
-                # result_bulk_update.to_excel(output_path_update, index=False)
-                export_to_excel_with_table(result_bulk_update, output_path_update)
-
-                time.sleep(2)  # Ensure files are written
+                # Export both result Excel files concurrently
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    f1 = executor.submit(export_to_excel_with_table, result_bulk, output_path)
+                    f2 = executor.submit(export_to_excel_with_table, result_bulk_update, output_path_update)
+                    f1.result()
+                    f2.result()
 
                 print(f"{datetime.now()} - Success Bulk. Files saved to disk.")
 
@@ -270,6 +269,25 @@ def process_bulk_files():
                 print(f"{datetime.now()} - Error in processing bulk files: {e}")
                 time.sleep(60)
 
+        elif (
+            check_file_exists(excel_path_weekly)
+            and not check_file_exists(excel_path_erp)
+            and not check_file_exists(excel_path_tc)
+        ):
+            print(f"{datetime.now()} - Start RunQuery & download TC concurrently...")
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                fut_erp = executor.submit(queryFromERP.queryFromERP, excel_path_weekly, folder_path_bulk)
+                fut_tc = executor.submit(
+                    downloadFromGTNexusBulk.run_and_check_download,
+                    r"C:\Compare\Result\Download",
+                    excel_path_weekly,
+                    folder_path_bulk
+                )
+                res_erp = fut_erp.result()
+                res_tc = fut_tc.result()
+            print(f"{datetime.now()} - ERP Complete" if res_erp else f"{datetime.now()} - ERP Failed")
+            print(f"{datetime.now()} - TC Complete" if res_tc else f"{datetime.now()} - TC Failed")
+
         elif check_file_exists(excel_path_weekly) and not check_file_exists(excel_path_erp):
             # print(f"{datetime.now()} - Start download...")
             # result = downloadFromERP.run_and_check_download(
@@ -298,113 +316,6 @@ def process_bulk_files():
             time.sleep(60)
 
     return output_names
-
-
-# def process_bulk_files():
-#     _check = False
-#     output_dataframes = []
-#     output_names = []
-#
-#     while not _check:
-#         folder_path_bulk = r'C:\Compare\Bulk'
-#         bulk_conditions = {
-#             "excel_path_bulk": ["Import sales order"],
-#             "excel_path_lineSheet_SS": ["SS", "Final all"],
-#             "excel_path_lineSheet_FW": ["FW", "Final all"],
-#             "excel_path_weekly": ["WEEKLY"],
-#             "excel_path_erp": ["Order lines"],
-#             "excel_path_tc": ["A1A+Released+Order"]
-#         }
-#         bulk_paths = get_file_paths(folder_path_bulk, bulk_conditions)
-#
-#         if are_paths_valid(bulk_paths):
-#             try:
-#                 # Process the files as before
-#                 result_bulk, result_bulk_update = loadBulkFile.load_bulk_file(
-#                     bulk_paths['excel_path_bulk'],
-#                     bulk_paths['excel_path_lineSheet_SS'],
-#                     bulk_paths['excel_path_lineSheet_FW'],
-#                     bulk_paths['excel_path_weekly'],
-#                     bulk_paths['excel_path_erp'],
-#                     bulk_paths['excel_path_tc']
-#                 )
-#
-#                 # Generate timestamp for filenames
-#                 timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-#
-#                 # Ensure the output directory exists
-#                 os.makedirs(r'C:\Compare\Result\Bulk', exist_ok=True)
-#
-#                 # Define output paths and save files
-#                 output_path = r'C:\Compare\Result\Bulk\Compare_Price_{}.xlsx'.format(timestamp)
-#                 output_path_update = r'C:\Compare\Result\Bulk\Updated_Bulk_{}.xlsx'.format(timestamp)
-#
-#                 # Save to disk (keeping this for backup)
-#                 result_bulk.to_excel(output_path, index=False)
-#                 result_bulk_update.to_excel(output_path_update, index=False)
-#
-#                 # Wait for files to be written completely
-#                 time.sleep(2)
-#
-#                 print(f"{datetime.now()} - Success Bulk. Files saved to disk.")
-#
-#                 # Store DataFrames and filenames for email attachment
-#                 output_dataframes.append((result_bulk, f"Compare_Price_{timestamp}.xlsx"))
-#                 output_dataframes.append((result_bulk_update, f"Updated_Bulk_{timestamp}.xlsx"))
-#                 output_names = [output_path, output_path_update]
-#
-#                 # Move input files to archive folder
-#                 folder_path_result = r'C:\Compare\Result\Old'
-#                 destination_folder = move_files_to_folder(bulk_paths, folder_path_result, 'Bulk')
-#                 print(f"Processed files moved to: {destination_folder}")
-#
-#                 # recipient_emails = ['thanh-it@allianceone.com.vn'
-#                 #                     ]
-#                 recipient_emails = ['mio@allianceone.com.vn',
-#                                     'mera.orders@allianceoneapparel.com',
-#                                     'allice@allianceone.com.vn',
-#                                     'mera.orders3@allianceone.com.vn',
-#                                     'mera.thanhqui@allianceone.com.vn',
-#                                     'mera.orders4@allianceone.com.vn',
-#                                     'mera.orders5@allianceone.com.vn']
-#
-#                 # Send email with DataFrame attachments
-#                 # send_email_with_dataframes(
-#                 #     recipient_email=recipient_emails,
-#                 #     subject='Process Bulk File Complete',
-#                 #     body=send_completion_email(bulk_paths, output_names, 'Bulk'),
-#                 #     dataframes=output_dataframes
-#                 # )
-#
-#                 _check = True
-#
-#             except Exception as e:
-#                 print(f"Error in processing bulk files: {e}")
-#                 time.sleep(60)  # Wait before retrying
-#
-#         elif check_file_exists(bulk_paths.get('excel_path_weekly')) and not check_file_exists(
-#                 bulk_paths.get('excel_path_erp')):
-#             print(f"{datetime.now()} - Start download...")
-#             result = downloadFromERP.run_and_check_download(
-#                 r"C:\Compare\Result\Download"
-#                 , bulk_paths['excel_path_weekly']
-#                 , r'C:\Compare\Bulk')
-#             print(f"{datetime.now()} - Complete") if result else print(f"{datetime.now()} - Failed")
-#
-#         elif check_file_exists(bulk_paths.get('excel_path_weekly')) and not check_file_exists(
-#                 bulk_paths.get('excel_path_tc')):
-#             print(f"{datetime.now()} - Start download TC...")
-#             result = downloadFromGTNexusBulk.run_and_check_download(
-#                 r"C:\Compare\Result\Download"
-#                 , bulk_paths['excel_path_weekly']
-#                 , r'C:\Compare\Bulk')
-#             print(f"{datetime.now()} - Complete") if result else print(f"{datetime.now()} - Failed")
-#
-#         else:
-#             print(f"{datetime.now()} - One or more bulk paths are missing. Please check the file paths.")
-#             time.sleep(60)  # Wait before checking again
-#
-#     return output_names
 
 
 def main():
@@ -463,16 +374,6 @@ def send_email_with_dataframes(recipient_email='thanh-it@allianceone.com.vn',
                                smtp_port=465):
     """
     Send an email alert with pandas DataFrames attached as Excel files.
-
-    Args:
-        recipient_email (str or list): Email address of the recipient(s)
-        subject (str): Email subject
-        body (str): Email body text
-        dataframes (list): List of tuples (DataFrame, filename)
-        sender_email (str): Sender's email address
-        sender_password (str): Sender's email password
-        smtp_server (str): SMTP server address
-        smtp_port (int): SMTP server port
     """
     try:
         # Create message container
@@ -665,16 +566,6 @@ def send_email_alert(recipient_email='thanh-it@allianceone.com.vn',
                      smtp_port=25):
     """
     Send an email alert about process completion with file attachments.
-
-    Args:
-        recipient_email (str): Email address of the recipient
-        subject (str): Email subject
-        body (str): Email body text
-        attachments (list): List of file paths to attach
-        sender_email (str): Sender's email address
-        sender_password (str): Sender's email password
-        smtp_server (str): SMTP server address
-        smtp_port (int): SMTP server port
     """
     try:
         # Create message container

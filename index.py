@@ -55,6 +55,31 @@ async def home():
     return generate_html_template(sample_result_files, bulk_result_files)
 
 
+@app.get("/check-uploaded-files/")
+async def check_uploaded_files_api():
+    """Check if required sample and bulk files are currently present in upload folders."""
+    sample_missing = check_required_files_exist(
+        FOLDER_PATH_SAMPLE,
+        [
+            (FILE_PATTERNS["sample"]["import_path"], "Import file"),
+            (FILE_PATTERNS["sample"]["lo_path"], "LO file")
+        ]
+    )
+    bulk_missing = check_required_files_exist(
+        FOLDER_PATH_BULK,
+        [
+            (FILE_PATTERNS["bulk"]["excel_path_bulk"], "Import sales order file"),
+            (FILE_PATTERNS["bulk"]["excel_path_lineSheet_SS"], "LineSheet SS file"),
+            (FILE_PATTERNS["bulk"]["excel_path_lineSheet_FW"], "LineSheet FW file"),
+            (FILE_PATTERNS["bulk"]["excel_path_weekly"], "Weekly file")
+        ]
+    )
+    return {
+        "sample_ready": len(sample_missing) == 0,
+        "bulk_ready": len(bulk_missing) == 0
+    }
+
+
 @app.get("/get-result-files/")
 async def get_result_files_api():
     """Get all result files from both Sample and Bulk result folders."""
@@ -187,8 +212,15 @@ async def upload_bulk_files(
             content={"detail": f"Error uploading bulk files: {str(e)}"}
         )
 
+
 class ProcessRequest(BaseModel):
     mode: str
+
+
+sample_process_semaphore = asyncio.Semaphore(1)
+bulk_process_semaphore = asyncio.Semaphore(1)
+
+
 @app.post("/process-sample-files/")
 async def process_sample_files_api(request: ProcessRequest):
     """Process the sample files that have been uploaded."""
@@ -208,8 +240,9 @@ async def process_sample_files_api(request: ProcessRequest):
                 content={"detail": f"Missing files: {', '.join(missing_files)}. Please upload them first."}
             )
 
-        # Call the imported process_sample_files function with the mode parameter
-        process_sample_files(request.mode)
+        # Run blocking processing in a background thread so the event loop is not blocked
+        async with sample_process_semaphore:
+            await asyncio.to_thread(process_sample_files, request.mode)
 
         # Get list of created result files
         result_files = get_result_files(FOLDER_PATH_RESULT_SAMPLE)
@@ -223,9 +256,6 @@ async def process_sample_files_api(request: ProcessRequest):
             status_code=500,
             content={"detail": f"Error processing sample files: {str(e)}"}
         )
-
-
-bulk_process_semaphore = asyncio.Semaphore(1)
 
 
 @app.post("/process-bulk-files/")
@@ -250,8 +280,9 @@ async def process_bulk_files_api():
                     "detail": f"Missing files: {', '.join(missing_files)}. Please upload all required files first."}
             )
 
-        # Call the imported process_bulk_files function
-        process_bulk_files()
+        # Run blocking processing in a background thread so the event loop is not blocked
+        async with bulk_process_semaphore:
+            await asyncio.to_thread(process_bulk_files)
 
         # Get list of created result files
         result_files = get_result_files(FOLDER_PATH_RESULT_BULK)

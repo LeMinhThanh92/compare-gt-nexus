@@ -1,26 +1,51 @@
+from concurrent.futures import ThreadPoolExecutor
 import os
 from decimal import Decimal
 
+import numpy as np
 import pandas as pd
 
 from fileConfig import _dtypeSample
 
+TWO_PLACES = Decimal('0.00')
+
+
+def _quantize_col(series: pd.Series) -> pd.Series:
+    return series.map(lambda x: Decimal(x).quantize(TWO_PLACES))
+
 
 def load_sample_file(_file_import, _file_lo, _file_tc):
     print('Start process sample')
-    _tableSample = pd.read_excel(_file_import
-                                 , dtype=_dtypeSample
-                                 , sheet_name='Sheet1'
-                                 )
+
+    tc_cols = ['PO Number', 'Price Per Unit', 'Total Adjustments', 'Total Document Amount']
+
+    def read_import():
+        return pd.read_excel(_file_import, dtype=_dtypeSample, sheet_name='Sheet1')
+
+    def read_lo():
+        with pd.ExcelFile(_file_lo, engine='openpyxl') as xls:
+            s1 = pd.read_excel(xls, sheet_name=1)
+            s2 = pd.read_excel(xls, sheet_name=2)
+        return s1, s2
+
+    def read_tc():
+        df = pd.read_excel(_file_tc, sheet_name=0, usecols=tc_cols)
+        return df[tc_cols].copy()
+
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        fut_import = executor.submit(read_import)
+        fut_lo = executor.submit(read_lo)
+        fut_tc = executor.submit(read_tc)
+
+        _tableSample = fut_import.result()
+        _filterRows, _tableLOAvg = fut_lo.result()
+        _filteredSelectionTC = fut_tc.result()
+
     _tableSample["TABLETYPE"]: int = 1
     _tableSample["CREATEDBY"]: str = "AD"
 
     _tableSample.replace({pd.NA: "", float('nan'): "", float(
         'inf'): "", float('-inf'): ""}, inplace=True)
-
-    _filterRows = pd.read_excel(_file_lo, sheet_name=1)
-    _tableLOAvg = pd.read_excel(_file_lo, sheet_name=2)
-    _tableTC = pd.read_excel(_file_tc, sheet_name=0)
 
     def check_filename_contains_monthly(file_path):
         filename = os.path.basename(file_path)
@@ -29,27 +54,23 @@ def load_sample_file(_file_import, _file_lo, _file_tc):
     # _filterRows = _tableLO[_tableLO['FACTORY_NAME'] == '213001'].copy()
 
     # _filterRowsAvg = _tableLOAvg[_tableLOAvg['FACTORY_NAME'].astype(str) == '213001'].copy()
-    _filterRowsAvg = _tableLOAvg.copy()
+    _filterRowsAvg = _tableLOAvg
 
     STYLE = _filterRows.columns.values[2]
     FOB = _filterRows.columns.values[4]
     AVG = _filterRowsAvg.columns.values[3]
     AVG1 = _filterRowsAvg.columns.values[4]
 
-    _filteredSelection = _filterRows[[STYLE, FOB]].copy()
-    _filteredSelection.rename(columns={STYLE: 'STYLE', FOB: 'FOB'}, inplace=True)
+    _filteredSelection = _filterRows[[STYLE, FOB]].rename(columns={STYLE: 'STYLE', FOB: 'FOB'})
 
     print('load avg')
 
     # _filteredSelection.loc[:,'FOB'] = _filteredSelection['FOB'] * value
 
-    _filteredSelectionTC = _tableTC[
-        ['PO Number', 'Price Per Unit', 'Total Adjustments', 'Total Document Amount']].copy()
     _filteredSelectionTC.rename(columns={'PO Number': 'PO', 'Price Per Unit': 'TCFOB'}, inplace=True)
 
-    _tableSample['ORDERNO'] = _tableSample['ORDERNO'].apply(
-        lambda x: '0' + str(x) if len(str(x)) == 9 else str(x)
-    )
+    s_orderno = _tableSample['ORDERNO'].astype(str)
+    _tableSample['ORDERNO'] = np.where(s_orderno.str.len() == 9, '0' + s_orderno, s_orderno)
     _tableSample['ORDERNO'] = _tableSample['ORDERNO'].astype(str)
     _filteredSelectionTC['PO'] = _filteredSelectionTC['PO'].astype(str)
 
@@ -74,7 +95,7 @@ def load_sample_file(_file_import, _file_lo, _file_tc):
     elif value == 1.53:
         _mergedTable.loc[_mergedTable['FOB'] == 0, 'FOB'] = _filterRowsAvg[AVG].values[0]
 
-    _mergedTable['FOB'] = _mergedTable['FOB'].apply(lambda x: Decimal(x).quantize(Decimal('0.00')))
+    _mergedTable['FOB'] = _quantize_col(_mergedTable['FOB'])
 
     _mergedTable = pd.merge(_mergedTable,
                             _filteredSelectionTC,
@@ -83,13 +104,11 @@ def load_sample_file(_file_import, _file_lo, _file_tc):
                             how='left')
 
     _mergedTable.drop(columns=['PO'], inplace=True, errors='ignore')
-    _mergedTable['TCFOB'] = _mergedTable['TCFOB'].apply(lambda x: Decimal(x).quantize(Decimal('0.00')))
-    _mergedTable['Total Adjustments'] = _mergedTable['Total Adjustments'].apply(
-        lambda x: Decimal(x).quantize(Decimal('0.00')))
-    _mergedTable['Total Document Amount'] = _mergedTable['Total Document Amount'].apply(
-        lambda x: Decimal(x).quantize(Decimal('0.00')))
+    _mergedTable['TCFOB'] = _quantize_col(_mergedTable['TCFOB'])
+    _mergedTable['Total Adjustments'] = _quantize_col(_mergedTable['Total Adjustments'])
+    _mergedTable['Total Document Amount'] = _quantize_col(_mergedTable['Total Document Amount'])
     _mergedTable['Result'] = abs((_mergedTable['TCFOB'] - _mergedTable['FOB']) / _mergedTable['FOB'] * 100)
-    _mergedTable['Result'] = _mergedTable['Result'].apply(lambda x: Decimal(x).quantize(Decimal('0.00')))
+    _mergedTable['Result'] = _quantize_col(_mergedTable['Result'])
 
     _mergedTable.replace({pd.NA: "", float('nan'): "", float(
         'inf'): "", float('-inf'): ""}, inplace=True)

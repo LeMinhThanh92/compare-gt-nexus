@@ -1,7 +1,10 @@
+import os
 from typing import List
 
 import pandas as pd
 import sqlalchemy
+
+from file_utils import read_excel_with_header_detection
 
 
 def queryFromERP(_file_path: str, folder_path_bulk: str = r'C:\Compare\Bulk'):
@@ -22,36 +25,12 @@ def queryFromERP(_file_path: str, folder_path_bulk: str = r'C:\Compare\Bulk'):
         )
         return sqlalchemy.create_engine(connection_url)
 
-    def read_excel_with_header_detection(file_path, sheet_name=0, dtype=None):
-        """
-        Read Excel file and detect if first row is N/A, then use second row as header
-        """
-        # First, read just the first two rows to check the header
-        temp_df = pd.read_excel(file_path, sheet_name=sheet_name, nrows=2, header=None)
-
-        # Check if first cell [0,0] is N/A, NaN, or similar
-        first_cell = temp_df.iloc[0, 0]
-
-        # Check for various forms of N/A
-        if (pd.isna(first_cell) or
-                str(first_cell).upper() in ['N/A', 'NA', 'NULL', '#N/A'] or
-                first_cell == ''):
-
-            print("First row appears to be N/A, using second row as header")
-            # Use second row (index 1) as header
-            df = pd.read_excel(file_path, sheet_name=sheet_name, header=1, dtype=dtype)
-        else:
-            print("Using first row as header")
-            # Use first row (index 0) as header (default)
-            df = pd.read_excel(file_path, sheet_name=sheet_name, header=0, dtype=dtype)
-
-        return df
-
-    def process_excel_to_chunks(file_path: str, chunk_size: int = 700) -> List[str]:
-        # Use the header detection function instead of pd.read_excel directly
-        df = read_excel_with_header_detection(file_path, sheet_name=0)
+    def read_so_and_build_chunks(file_path: str, chunk_size: int = 700) -> tuple[List[str], int]:
+        # Read only the SO column once using the shared header detection function
+        df = read_excel_with_header_detection(file_path, sheet_name=0, usecols=['SO'])
 
         so_list = df['SO'].dropna().astype(str).unique()
+        so_count = len(so_list)
 
         formatted_so = [f"('{so}')" for so in so_list]
 
@@ -62,7 +41,7 @@ def queryFromERP(_file_path: str, folder_path_bulk: str = r'C:\Compare\Bulk'):
             insert_statement = f"INSERT INTO #ItemFilter (SALESID)\nVALUES {chunk_values};"
             chunks.append(insert_statement)
 
-        return chunks
+        return chunks, so_count
 
     def get_temp_table_creation_sql() -> str:
         return "CREATE TABLE #ItemFilter (SALESID NVARCHAR(20));"
@@ -107,16 +86,9 @@ def queryFromERP(_file_path: str, folder_path_bulk: str = r'C:\Compare\Bulk'):
     drop table #ItemFilter    
     """
 
-    def execute_complete_query(file_path: str, chunk_size: int = 700) -> pd.DataFrame:
+    def execute_complete_query(insert_chunks: List[str]) -> pd.DataFrame:
         """
         Execute the complete workflow: create temp table, insert data, run main query
-
-        Args:
-            file_path: Path to Excel file
-            chunk_size: Number of items per chunk
-
-        Returns:
-            DataFrame with query results
         """
         engine = get_db_engine245()
 
@@ -131,8 +103,6 @@ def queryFromERP(_file_path: str, folder_path_bulk: str = r'C:\Compare\Bulk'):
                     print("✓ Temporary table created")
 
                     # 2. Insert data in chunks
-                    insert_chunks = process_excel_to_chunks(file_path, chunk_size)
-
                     for i, chunk in enumerate(insert_chunks, 1):
                         conn.execute(sqlalchemy.text(chunk))
                         print(f"✓ Chunk {i}/{len(insert_chunks)} inserted")
@@ -156,55 +126,29 @@ def queryFromERP(_file_path: str, folder_path_bulk: str = r'C:\Compare\Bulk'):
             print(f"Error: {e}")
             raise
 
-    def preview_chunks(file_path: str, chunk_size: int = 700) -> None:
-        try:
-            chunks = process_excel_to_chunks(file_path, chunk_size)
+    def preview_chunks(file_path: str, chunks: List[str], chunk_size: int = 700) -> None:
+        print(f"File: {file_path}")
+        print(f"Total chunks: {len(chunks)}")
+        print(f"Chunk size: {chunk_size}")
+        print("-" * 50)
 
-            print(f"File: {file_path}")
-            print(f"Total chunks: {len(chunks)}")
-            print(f"Chunk size: {chunk_size}")
-            print("-" * 50)
-
-            for i, chunk in enumerate(chunks, 1):
-                print(f"--- Chunk {i} ---")
-                # Show first 200 characters of each chunk
-                preview = chunk[:200] + "..." if len(chunk) > 200 else chunk
-                print(preview)
-                print()
-
-        except Exception as e:
-            print(f"Error reading file: {e}")
-
-    def get_so_count(file_path: str) -> int:
-        try:
-            # Use the header detection function instead of pd.read_excel directly
-            df = read_excel_with_header_detection(file_path, sheet_name=0)
-            unique_count = df['SO'].dropna().nunique()
-            return unique_count
-        except Exception as e:
-            print(f"Error reading file: {e}")
-            return 0
+        for i, chunk in enumerate(chunks, 1):
+            print(f"--- Chunk {i} ---")
+            # Show first 200 characters of each chunk
+            preview = chunk[:200] + "..." if len(chunk) > 200 else chunk
+            print(preview)
+            print()
 
     def export_results(results: pd.DataFrame, folder_path_bulk: str) -> str:
         """
         Export results to Excel file in the specified bulk folder
-
-        Args:
-            results: DataFrame with query results
-            file_path: Original input file path (used to generate output filename)
-            folder_path_bulk: Directory path where results will be saved
-
-        Returns:
-            Path to the exported file
         """
-        import os
-
         try:
             # Create the bulk directory if it doesn't exist
             os.makedirs(folder_path_bulk, exist_ok=True)
 
-            # Create output filename with fixed name 'Order lines' and timestamp
-            output_filename = f"Order lines_ERP.xlsx"
+            # Create output filename with fixed name 'Order lines'
+            output_filename = "Order lines_ERP.xlsx"
             output_path = os.path.join(folder_path_bulk, output_filename)
 
             # Export to Excel
@@ -221,14 +165,15 @@ def queryFromERP(_file_path: str, folder_path_bulk: str = r'C:\Compare\Bulk'):
 
     # file_path = r'C:\Compare\testWeekly.xlsx'
 
-    print("=== PREVIEW ===")
-    preview_chunks(_file_path)
+    insert_chunks, so_count = read_so_and_build_chunks(_file_path, chunk_size=700)
 
-    so_count = get_so_count(_file_path)
+    print("=== PREVIEW ===")
+    preview_chunks(_file_path, insert_chunks)
+
     print(f"Total unique SO values: {so_count}")
 
     print("\n=== EXECUTING QUERY ===")
-    results = execute_complete_query(_file_path)
+    results = execute_complete_query(insert_chunks)
     print(f"Results shape: {results.shape}")
     print(results.head())
 

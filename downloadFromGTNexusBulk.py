@@ -3,42 +3,28 @@ import shutil
 import time
 import traceback
 
-import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 
+from file_utils import read_excel_with_header_detection
+
 
 def run_and_check_download(folder_path_download, _file_import, destination_dir, max_retries=5):
     retry_count = 0
     driver = None
 
-    def read_excel_with_header_detection(file_path, sheet_name=0, dtype=None):
-        """
-        Read Excel file and detect if first row is N/A, then use second row as header
-        """
-        # First, read just the first two rows to check the header
-        temp_df = pd.read_excel(file_path, sheet_name=sheet_name, nrows=2, header=None)
-
-        # Check if first cell [0,0] is N/A, NaN, or similar
-        first_cell = temp_df.iloc[0, 0]
-
-        # Check for various forms of N/A
-        if (pd.isna(first_cell) or
-                str(first_cell).upper() in ['N/A', 'NA', 'NULL', '#N/A'] or
-                first_cell == ''):
-
-            print("First row appears to be N/A, using second row as header")
-            # Use second row (index 1) as header
-            df = pd.read_excel(file_path, sheet_name=sheet_name, header=1, dtype=dtype)
-        else:
-            print("Using first row as header")
-            # Use first row (index 0) as header (default)
-            df = pd.read_excel(file_path, sheet_name=sheet_name, header=0, dtype=dtype)
-
-        return df
+    # Read only the PO column once before the retry loop
+    _tableWeekly = read_excel_with_header_detection(
+        _file_import,
+        sheet_name=0,
+        dtype={"PO": str},
+        usecols=["PO"]
+    )
+    _tableWeekly['PO'] = _tableWeekly['PO'].astype(str)
+    po_string = ",".join(_tableWeekly['PO'].dropna().astype(str).unique())
 
     while retry_count < max_retries:
         try:
@@ -63,10 +49,6 @@ def run_and_check_download(folder_path_download, _file_import, destination_dir, 
             # options.add_argument("--window-size=1920x1080")
             driver = webdriver.Edge(options=options)
 
-            # Read Excel file and prepare PO string
-            _tableWeekly = read_excel_with_header_detection(_file_import, sheet_name=0, dtype={"PO": str})
-            _tableWeekly['PO'] = _tableWeekly['PO'].astype(str)
-            po_string = ",".join(_tableWeekly['PO'].dropna().astype(str).unique())
             url = "https://network.infornexus.com/en/trade/ReportRun?key=432826891033"
             driver.get(url)
 

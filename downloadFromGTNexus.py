@@ -15,13 +15,35 @@ from selenium.webdriver.support.ui import WebDriverWait
 from fileConfig import _dtypeSample
 
 
-def run_and_check_download(folder_path_download, _file_import, destination_dir,mode='A1A', max_retries=5):
+def run_and_check_download(folder_path_download, _file_import, destination_dir, mode='A1A', max_retries=5):
     retry_count = 0
     driver = None
 
     print(mode)
 
+    # Read only the required CUSTREQDATE column once before the retry loop
+    _tableSample = pd.read_excel(
+        _file_import,
+        dtype={'CUSTREQDATE': str},
+        sheet_name='Sheet1',
+        usecols=['CUSTREQDATE']
+    )
+    _tableSample['CUSTREQDATE'] = pd.to_datetime(_tableSample['CUSTREQDATE'], errors='coerce')
 
+    min_date = pd.Timestamp(_tableSample['CUSTREQDATE'].min())
+    max_date = pd.Timestamp(_tableSample['CUSTREQDATE'].max())
+    min_date = min_date.replace(day=1).strftime('%Y-%m-%d')
+    next_month = max_date.month + 2
+    year_offset = max_date.year + (next_month - 1) // 12
+    next_month = (next_month - 1) % 12 + 1  # Ensure month is between 1-12
+
+    # Get the last day of that month
+    last_day = calendar.monthrange(year_offset, next_month)[1]
+    max_date = max_date.replace(year=year_offset, month=next_month, day=last_day).strftime('%Y-%m-%d')
+
+    first_day_minus_6_months = (_tableSample['CUSTREQDATE'].max() - relativedelta(months=5)).replace(
+        day=1).strftime(
+        '%Y-%m-%d')
 
     while retry_count < max_retries:
         try:
@@ -46,33 +68,13 @@ def run_and_check_download(folder_path_download, _file_import, destination_dir,m
             # options.add_argument("--window-size=1920x1080")
             driver = webdriver.Edge(options=options)
 
-            _tableSample = pd.read_excel(_file_import
-                                         , dtype=_dtypeSample
-                                         , sheet_name='Sheet1'
-                                         )
-            _tableSample['CUSTREQDATE'] = pd.to_datetime(_tableSample['CUSTREQDATE'], errors='coerce')
-
-            min_date = pd.Timestamp(_tableSample['CUSTREQDATE'].min())
-            max_date = pd.Timestamp(_tableSample['CUSTREQDATE'].max())
-            min_date = min_date.replace(day=1).strftime('%Y-%m-%d')
-            next_month = max_date.month + 2
-            year_offset = max_date.year + (next_month - 1) // 12
-            next_month = (next_month - 1) % 12 + 1  # Ensure month is between 1-12
-
-            # Get the last day of that month
-            last_day = calendar.monthrange(year_offset, next_month)[1]
-            max_date = max_date.replace(year=year_offset, month=next_month, day=last_day).strftime('%Y-%m-%d')
-
-            first_day_minus_6_months = (_tableSample['CUSTREQDATE'].max() - relativedelta(months=5)).replace(
-                day=1).strftime(
-                '%Y-%m-%d')
             url = "https://network.infornexus.com/en/trade/ReportRun.jsp?key=357945647677#"
             driver.get(url)
             # is_trx_file = 'TRX' in os.path.basename(_file_import).upper()
             username = '213001_T&A'
             password = 'Ear@123123!@#'
             company = '5717-9890-1825-2755'
-            if mode=='TRX':
+            if mode == 'TRX':
                 username = 'Q5S001-SAMPLE'
                 password = 'Q5S001_2024@mt'
                 company = '5717-9890-1834-7753'

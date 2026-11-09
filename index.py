@@ -3,6 +3,7 @@ import os
 
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from pydantic import BaseModel
 from starlette.staticfiles import StaticFiles
 
 from Import import process_sample_files, process_bulk_files
@@ -186,9 +187,10 @@ async def upload_bulk_files(
             content={"detail": f"Error uploading bulk files: {str(e)}"}
         )
 
-
+class ProcessRequest(BaseModel):
+    mode: str
 @app.post("/process-sample-files/")
-async def process_sample_files_api():
+async def process_sample_files_api(request: ProcessRequest):
     """Process the sample files that have been uploaded."""
     try:
         # Check if required files exist
@@ -206,8 +208,8 @@ async def process_sample_files_api():
                 content={"detail": f"Missing files: {', '.join(missing_files)}. Please upload them first."}
             )
 
-        # Call the imported process_sample_files function
-        process_sample_files()
+        # Call the imported process_sample_files function with the mode parameter
+        process_sample_files(request.mode)
 
         # Get list of created result files
         result_files = get_result_files(FOLDER_PATH_RESULT_SAMPLE)

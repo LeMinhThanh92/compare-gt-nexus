@@ -88,7 +88,7 @@ def get_file_paths(_folder_path, file_conditions):
         return {"error": f"Error: {e}"}
 
 
-def process_sample_files():
+def process_sample_files(mode = 'A1A'):
     _check = False
     output_path = None
     output_dataframe = None
@@ -122,6 +122,7 @@ def process_sample_files():
                 output_path = r'C:\Compare\Result\Sample\Updated_Sample_{}.xlsx'.format(timestamp)
                 output_filename = f"Updated_Sample_{timestamp}.xlsx"
                 # result_sample.to_excel(output_path, index=False)
+                print(result_sample)
                 export_to_excel_with_table(result_sample, output_path)
 
                 # Wait for file to be written completely
@@ -164,7 +165,8 @@ def process_sample_files():
             result = downloadFromGTNexus.run_and_check_download(
                 r"C:\Compare\Result\Download"
                 , sample_paths['import_path']
-                , r'C:\Compare\Sample')
+                , r'C:\Compare\Sample'
+                ,mode)
             print(f"{datetime.now()} - Complete") if result else print(f"{datetime.now()} - Failed")
 
         else:
@@ -186,7 +188,7 @@ def process_bulk_files():
         "excel_path_lineSheet_3rd": ["_3rd", "Final all"],  # Optional
         "excel_path_weekly": ["WEEKLY"],
         "excel_path_erp": ["Order lines"],
-        "excel_path_tc": ["A1A+Released+Order"]
+        "excel_path_tc": ["A1A Released Order"]
     }
 
     output_dataframes = []
@@ -203,6 +205,7 @@ def process_bulk_files():
         excel_path_weekly = bulk_paths.get('excel_path_weekly')
         excel_path_erp = bulk_paths.get('excel_path_erp')
         excel_path_tc = bulk_paths.get('excel_path_tc')
+
 
         if are_paths_valid(bulk_paths, optional_keys=optional_keys):
             try:
@@ -240,6 +243,9 @@ def process_bulk_files():
                 destination_folder = move_files_to_folder(bulk_paths, folder_path_result, 'Bulk')
                 print(f"{datetime.now()} - Processed files moved to: {destination_folder}")
 
+                # recipient_emails = [
+                #     'thanh-it@allianceone.com.vn'
+                # ]
                 recipient_emails = [
                     'mio@allianceone.com.vn',
                     'mera.orders@allianceoneapparel.com',
@@ -453,8 +459,8 @@ def send_email_with_dataframes(recipient_email='thanh-it@allianceone.com.vn',
                                dataframes=None,
                                sender_email='elslpom1@allianceoneapparel.com',
                                sender_password='hAn71@$2{0[22!',
-                               smtp_server='103.1.208.204',
-                               smtp_port=25):
+                               smtp_server='mail.allianceoneapparel.com',
+                               smtp_port=465):
     """
     Send an email alert with pandas DataFrames attached as Excel files.
 
@@ -536,14 +542,14 @@ def send_email_with_dataframes(recipient_email='thanh-it@allianceone.com.vn',
         # Establish SMTP connection with detailed error handling
         try:
             print(f"Connecting to SMTP server {smtp_server}:{smtp_port}...")
-            server = smtplib.SMTP(smtp_server, smtp_port)
+            server = smtplib.SMTP_SSL(smtp_server, smtp_port)
             server.set_debuglevel(1)  # Enable verbose debug output
 
             print("Sending EHLO...")
             server.ehlo()  # Say hello to the server
 
             print("Starting TLS...")
-            server.starttls()  # Enable TLS encryption
+            # server.starttls()  # Enable TLS encryption
 
             print("Sending EHLO after TLS...")
             server.ehlo()  # Say hello again after TLS

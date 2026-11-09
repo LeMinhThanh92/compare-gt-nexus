@@ -20,7 +20,7 @@ def load_sample_file(_file_import, _file_lo, _file_tc):
 
     _filterRows = pd.read_excel(_file_lo, sheet_name=1)
     _tableLOAvg = pd.read_excel(_file_lo, sheet_name=2)
-    _tableTC = pd.read_excel(_file_tc, sheet_name='Page 1')
+    _tableTC = pd.read_excel(_file_tc, sheet_name=0)
 
     def check_filename_contains_monthly(file_path):
         filename = os.path.basename(file_path)
@@ -28,7 +28,8 @@ def load_sample_file(_file_import, _file_lo, _file_tc):
 
     # _filterRows = _tableLO[_tableLO['FACTORY_NAME'] == '213001'].copy()
 
-    _filterRowsAvg = _tableLOAvg[_tableLOAvg['FACTORY_NAME'].astype(str) == '213001'].copy()
+    # _filterRowsAvg = _tableLOAvg[_tableLOAvg['FACTORY_NAME'].astype(str) == '213001'].copy()
+    _filterRowsAvg = _tableLOAvg.copy()
 
     STYLE = _filterRows.columns.values[2]
     FOB = _filterRows.columns.values[4]
@@ -81,7 +82,7 @@ def load_sample_file(_file_import, _file_lo, _file_tc):
                             right_on='PO',
                             how='left')
 
-    _mergedTable.drop(columns=['PO'], inplace=True)
+    _mergedTable.drop(columns=['PO'], inplace=True, errors='ignore')
     _mergedTable['TCFOB'] = _mergedTable['TCFOB'].apply(lambda x: Decimal(x).quantize(Decimal('0.00')))
     _mergedTable['Total Adjustments'] = _mergedTable['Total Adjustments'].apply(
         lambda x: Decimal(x).quantize(Decimal('0.00')))

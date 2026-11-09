@@ -108,7 +108,8 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
 
     def get_filtered_table(df):
         return df[
-            (df['Costsheet Status (C)'].str.contains('Confirmed', case=False, na=False))].copy()
+            (df['Status (C)'].str.contains('Confirmed', case=False, na=False))].copy()
+            # (df['Costsheet Status (C)'].str.contains('Confirmed', case=False, na=False))].copy()
 
     print('Start Processing...')
     # ----Read excel file
@@ -118,13 +119,13 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
                                )
     _tableBulk["TABLETYPE"]: int = 2
     _tableBulk["CREATEDBY"]: str = "AD"
-    _tableSS = pd.read_excel(_file_season_ss, sheet_name='Sheet1', dtype={"Sizes within Size Group (C)": str})
+    _tableSS = pd.read_excel(_file_season_ss, sheet_name='Sheet1', dtype={"Sizes Within Size Group (C)": str})
     _tableSS = _tableSS[_tableSS['Factory Group Code (MF)'] == '213001'].copy()
-    _tableFW = pd.read_excel(_file_season_fw, sheet_name='Sheet1', dtype={"Sizes within Size Group (C)": str})
+    _tableFW = pd.read_excel(_file_season_fw, sheet_name='Sheet1', dtype={"Sizes Within Size Group (C)": str})
     _tableFW = _tableFW[_tableFW['Factory Group Code (MF)'] == '213001'].copy()
     _tableWeekly = read_excel_with_header_detection(_file_weekly, sheet_name=0, dtype={"PO": str})
     _tableErp = pd.read_excel(_file_erp, sheet_name='Sheet1')
-    _tableTC = pd.read_excel(_file_tc, sheet_name='Page 1')
+    _tableTC = pd.read_excel(_file_tc, sheet_name=0)
     _tableWeekly['Schedule ex.Factory'] = pd.to_datetime(_tableWeekly['Schedule ex.Factory']).dt.date
 
     _tableSS_3 = None
@@ -171,6 +172,7 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
 
     _tableSeason = get_filtered_table(combinedSeason)
 
+
     # --Get the necessary columns in weekly, season and erp
     column_maps = {
         'weekly': {
@@ -185,9 +187,9 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
         },
         'season': {
             'columns': ['Working Number (M)', 'Intl. FOB (C)', 'Intl. Asian FOB (C)', 'Article Number (A)',
-                        'Sizes within Size Group (C)', 'Valid From (C)', 'Valid To (C)'],
+                        'Sizes Within Size Group (C)', 'Valid From (C)', 'Valid To (C)'],
             'rename': {'Working Number (M)': 'Style', 'Intl. FOB (C)': 'Price', 'Intl. Asian FOB (C)': 'PriceA',
-                       'Article Number (A)': 'Article', 'Sizes within Size Group (C)': 'Size'}
+                       'Article Number (A)': 'Article', 'Sizes Within Size Group (C)': 'Size'}
         }
     }
 
@@ -199,6 +201,8 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
     _filteredSeason = _tableSeason[column_maps['season']['columns']].rename(
         columns=column_maps['season']['rename']).copy()
 
+
+
     # ---Merged table
     _mergedTable = merge_with_date_range(_filteredWeekly, _filteredSeason)
 
@@ -206,9 +210,10 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
         columns=['Valid From (C)', 'Valid To (C)', 'Valid From (C)_x', 'Valid To (C)_x', 'Valid From (C)_y',
                  'Valid To (C)_y'], errors='ignore')
 
+
     _expandedTable = (
         _mergedTable
-        .assign(Size=_mergedTable['Size'].str.split(','))
+        .assign(Size=_mergedTable['Size'] .fillna('').astype(str).str.split(','))
         .explode('Size')
     )
 
@@ -238,7 +243,8 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
         lambda x: '0' + str(x) if len(str(x)) == 9 else str(x)
     )
     _expandedTable['PO'] = _expandedTable['PO'].astype(str)
-
+    _filteredErp['Size'] = _filteredErp['Size'].astype(str)
+    _expandedTable['Size'] = _expandedTable['Size'].astype(str)
     _tableMergedErp = pd.merge(
         _filteredErp,
         _expandedTable,
@@ -246,7 +252,6 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
         right_on=['Style1', 'Article', 'Size', 'PO'],
         how='left'
     )
-
     _tableMergedErpTC = pd.merge(
         _tableMergedErp,
         _filteredSelectionTC,
@@ -254,7 +259,6 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
         right_on=['Style', 'Article', 'Size', 'PO', 'PO Line Aggregator'],
         how='left'
     )
-
     # output_path = r'C:\Compare\Result\Test\Updated_Bulk2_{}.xlsx'.format(
     #     datetime.now().strftime('%Y%m%d%H%M%S')
     # )

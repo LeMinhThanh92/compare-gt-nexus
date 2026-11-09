@@ -79,7 +79,7 @@ def run_and_check_download(folder_path_download, _file_import, destination_dir, 
             password_field = WebDriverWait(driver, 15).until(
                 EC.presence_of_element_located((By.ID, "password"))
             )
-            password_field.send_keys("a1ateam@123")
+            password_field.send_keys("Ear@123123!@#")
 
             login_button = WebDriverWait(driver, 15).until(
                 EC.element_to_be_clickable((By.ID, "loginButton"))
@@ -152,7 +152,7 @@ def run_and_check_download(folder_path_download, _file_import, destination_dir, 
 
             while time.time() - download_start_time < download_timeout:
                 files = os.listdir(folder_path_download)
-                matching_files = [file for file in files if "A1A+Released+Order" in file]
+                matching_files = [file for file in files if "A1A Released Order" in file]
 
                 if matching_files:
                     for file in matching_files:

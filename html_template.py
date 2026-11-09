@@ -79,8 +79,19 @@ def generate_html_template(sample_result_files, bulk_result_files):
             </div>
 
             <div class="tab-content active" id="upload-tab">
+                <!-- Mode Selection Dropdown -->
+                <div class="dropdown-container">
+                    <label for="mode-select" class="dropdown-label">
+                        <i class="fas fa-cog"></i> Processing Mode
+                    </label>
+                    <select id="mode-select" class="dropdown-select" onchange="handleModeChange()">
+                        <option value="A1A">A1A</option>
+                        <option value="TRX">TRX</option>
+                    </select>
+                </div>
+
                 <div class="upload-container">
-                    <div class="upload-section">
+                    <div class="upload-section" id="sample-section">
                         <div class="section-header">
                             <h2><i class="fas fa-vial"></i> Sample Files</h2>
                             <span class="badge">2 Files Required</span>
@@ -116,7 +127,7 @@ def generate_html_template(sample_result_files, bulk_result_files):
                         </div>
 
                         <div class="selected-files" id="sample-selected-files">
-                            </div>
+                        </div>
 
                         <div class="action-buttons">
                             <button type="button" id="sample-upload-btn" class="btn primary-btn" onclick="uploadSampleFiles()">
@@ -129,7 +140,7 @@ def generate_html_template(sample_result_files, bulk_result_files):
                         </div>
                     </div>
 
-                    <div class="upload-section">
+                    <div class="upload-section" id="bulk-section">
                         <div class="section-header">
                             <h2><i class="fas fa-database"></i> Bulk Files</h2>
                             <span class="badge">4 Files Required</span>
@@ -189,7 +200,7 @@ def generate_html_template(sample_result_files, bulk_result_files):
                         </div>
 
                         <div class="selected-files" id="bulk-selected-files">
-                            </div>
+                        </div>
 
                         <div class="action-buttons">
                             <button type="button" id="bulk-upload-btn" class="btn primary-btn" onclick="uploadBulkFiles()">

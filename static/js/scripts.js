@@ -25,6 +25,18 @@ document.addEventListener('DOMContentLoaded', function () {
     checkUploadedFiles();
 });
 
+// Handle mode change from dropdown
+function handleModeChange() {
+    const modeSelect = document.getElementById('mode-select');
+    const bulkSection = document.getElementById('bulk-section');
+
+    if (modeSelect.value === 'TRX') {
+        bulkSection.classList.add('disabled');
+    } else {
+        bulkSection.classList.remove('disabled');
+    }
+}
+
 // Initialize tab functionality
 function initializeTabs() {
     const tabButtons = document.querySelectorAll('.tab-btn');
@@ -149,7 +161,6 @@ function detectFileCategory(fileName, type) {
     return null;
 }
 
-
 // Display selected files in the UI
 function displaySelectedFiles(files, type) {
     const container = document.getElementById(`${type}-selected-files`);
@@ -230,7 +241,7 @@ function validateFiles(type) {
 
     let patternsToValidate = requiredPatterns;
     if (type === 'bulk') {
-        // Extract the required patterns (all except the 'test' file which is the fifth one)
+        // Extract the required patterns (all except the '_3rd' file which is optional)
         patternsToValidate = requiredPatterns.filter(pattern => pattern.id !== '_3rd');
     }
 
@@ -238,26 +249,10 @@ function validateFiles(type) {
         return fileObj[pattern.id] !== undefined;
     });
 
-    // // Check if we have all required file types
-    // const hasAllRequiredTypes = requiredPatterns.every(pattern => {
-    //     return fileObj[pattern.id] !== undefined;
-    // });
-
     // Update UI based on validation
     uploadBtn.disabled = !hasAllRequiredTypes;
 
     return hasAllRequiredTypes;
-}
-
-// This function is no longer needed as validation is handled differently
-// Keeping it for reference but it's not used
-function validateSingleFile(fileName, type) {
-    fileName = fileName.toLowerCase();
-    const patterns = filePatterns[type];
-
-    return patterns.some(req =>
-        req.pattern.some(pattern => fileName.includes(pattern.toLowerCase()))
-    );
 }
 
 // Check if files have been uploaded and update UI accordingly
@@ -367,15 +362,22 @@ async function uploadBulkFiles() {
     }
 }
 
-// Process sample files
+// Process sample files - MODIFIED to include mode parameter
 async function processSampleFiles() {
     try {
         // Show spinner
         document.getElementById('sample-spinner').style.display = 'inline-block';
         document.getElementById('sample-process-btn').disabled = true;
 
+        // Get the selected mode
+        const mode = document.getElementById('mode-select').value;
+
         const response = await fetch('/process-sample-files/', {
-            method: 'POST'
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({mode: mode})
         });
 
         const result = await response.json();
@@ -441,8 +443,6 @@ function switchToResultsTab() {
 
 // Show upload progress animation
 function showUploadProgress(type) {
-    // This is a simplified implementation - in a real app, you would
-    // use the fetch API's upload progress event
     const dropzone = document.getElementById(`${type}-dropzone`);
     dropzone.style.opacity = '0.7';
     dropzone.style.pointerEvents = 'none';

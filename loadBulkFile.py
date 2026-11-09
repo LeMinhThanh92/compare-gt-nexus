@@ -20,7 +20,7 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
     _tableFW = _tableFW[_tableFW['Factory Group Code (MF)'] == '213001'].copy()
     _tableWeekly = pd.read_excel(_file_weekly, sheet_name=0, dtype={"PO": str})
     _tableErp = pd.read_excel(_file_erp, sheet_name='Sheet1')
-    _tableTC = pd.read_excel(_file_tc, sheet_name='Page 1')
+    _tableTC = pd.read_excel(_file_tc, sheet_name=0)
     _tableWeekly['Schedule ex.Factory'] = pd.to_datetime(_tableWeekly['Schedule ex.Factory']).dt.date
 
     _filteredSelectionTC = _tableTC[

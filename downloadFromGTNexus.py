@@ -15,9 +15,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 from fileConfig import _dtypeSample
 
 
-def run_and_check_download(folder_path_download, _file_import, destination_dir, max_retries=5):
+def run_and_check_download(folder_path_download, _file_import, destination_dir,mode='A1A', max_retries=5):
     retry_count = 0
     driver = None
+
+    print(mode)
+
+
 
     while retry_count < max_retries:
         try:
@@ -64,11 +68,11 @@ def run_and_check_download(folder_path_download, _file_import, destination_dir, 
                 '%Y-%m-%d')
             url = "https://network.infornexus.com/en/trade/ReportRun.jsp?key=357945647677#"
             driver.get(url)
-            is_trx_file = 'TRX' in os.path.basename(_file_import).upper()
+            # is_trx_file = 'TRX' in os.path.basename(_file_import).upper()
             username = '213001_T&A'
-            password = 'a1ateam@123'
+            password = 'Ear@123123!@#'
             company = '5717-9890-1825-2755'
-            if is_trx_file:
+            if mode=='TRX':
                 username = 'Q5S001-SAMPLE'
                 password = 'Q5S001_2024@mt'
                 company = '5717-9890-1834-7753'
@@ -157,18 +161,22 @@ def run_and_check_download(folder_path_download, _file_import, destination_dir, 
 
                 devision = Select(select_elements[9])
                 devision.select_by_index(3)
-                devision_select = driver.find_element(By.ID, "gwt_uid_35")
+                devision_select = driver.find_element(By.ID, "gwt_uid_36")
                 devision_select.click()
                 Select(devision_select).deselect_all()
+                # devision_select = driver.find_element(By.XPATH, "(//select)[21]")
+                # devision_select.click()
+                # devision_select = driver.find_element(By.XPATH, "(//select)[21]")
+                # devision_select.click()
 
                 option1 = WebDriverWait(driver, 15).until(
-                    EC.element_to_be_clickable((By.XPATH, "//option[@value='02']"))
+                    EC.presence_of_element_located((By.XPATH, "//option[@value='02']"))
                 )
                 option1.click()
 
                 order = Select(select_elements[10])
                 order.select_by_index(3)
-                order_select = driver.find_element(By.ID, "gwt_uid_36")
+                order_select = driver.find_element(By.ID, "gwt_uid_37")
                 order_select.click()
                 Select(order_select).deselect_all()
 
@@ -200,7 +208,7 @@ def run_and_check_download(folder_path_download, _file_import, destination_dir, 
 
             while time.time() - download_start_time < download_timeout:
                 files = os.listdir(folder_path_download)
-                matching_files = [file for file in files if "adidas+Released+Order" in file]
+                matching_files = [file for file in files if "A1A Released Order" in file]
 
                 if matching_files:
                     for file in matching_files:

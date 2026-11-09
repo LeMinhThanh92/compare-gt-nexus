@@ -1,11 +1,10 @@
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 
 from fileConfig import _dtypeBulk
-from file_utils import read_excel_with_header_detection
+from file_utils import read_excel_with_header_detection, smart_read_excel
 
 
 def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly, _file_erp, _file_tc,
@@ -128,17 +127,34 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
         'PO Number', 'PO Line Aggregator', 'Price Per Unit', 'Technical Size',
         'Article Number', 'Working Number', 'Total Adjustments', 'Total Document Amount'
     ]
-    season_dtype = {"Sizes Within Size Group (C)": str, "Sizes within Size Group (C)": str}
+    season_canonical_cols = ['Factory Group Code (MF)', 'Status (C)'] + column_maps['season']['columns']
+    season_dtype = {"Sizes Within Size Group (C)": str}
+    bulk_canonical_cols = ['PLANDATE', 'PODD', 'FACPRICE', 'SHIPTOCOUNTRY', 'FOBPRICE']
 
-    # ----Read excel files
-    _tableBulk = pd.read_excel(_file_import, dtype=_dtypeBulk, sheet_name='Sheet1')
+    # ----Read excel files with automatic column & sheet normalization
+    _tableBulk = smart_read_excel(
+        _file_import,
+        dtype=_dtypeBulk,
+        sheet_name='Sheet1',
+        canonical_cols=bulk_canonical_cols
+    )
     _tableBulk["TABLETYPE"]: int = 2
     _tableBulk["CREATEDBY"]: str = "AD"
 
-    _tableSS = pd.read_excel(_file_season_ss, sheet_name='Sheet1', dtype=season_dtype)
+    _tableSS = smart_read_excel(
+        _file_season_ss,
+        sheet_name='Sheet1',
+        dtype=season_dtype,
+        canonical_cols=season_canonical_cols
+    )
     _tableSS = _tableSS[_tableSS['Factory Group Code (MF)'] == '213001'].copy()
 
-    _tableFW = pd.read_excel(_file_season_fw, sheet_name='Sheet1', dtype=season_dtype)
+    _tableFW = smart_read_excel(
+        _file_season_fw,
+        sheet_name='Sheet1',
+        dtype=season_dtype,
+        canonical_cols=season_canonical_cols
+    )
     _tableFW = _tableFW[_tableFW['Factory Group Code (MF)'] == '213001'].copy()
 
     _tableWeekly = read_excel_with_header_detection(
@@ -146,25 +162,30 @@ def load_bulk_file(_file_import, _file_season_ss, _file_season_fw, _file_weekly,
         sheet_name=0,
         dtype={"PO": str},
         usecols=column_maps['weekly']['columns']
-    )[column_maps['weekly']['columns']].copy()
+    )
 
-    _tableErp = pd.read_excel(
+    _tableErp = smart_read_excel(
         _file_erp,
         sheet_name='Sheet1',
         usecols=column_maps['erp']['columns']
-    )[column_maps['erp']['columns']].copy()
+    )
 
-    _filteredSelectionTC = pd.read_excel(
+    _filteredSelectionTC = smart_read_excel(
         _file_tc,
         sheet_name=0,
         usecols=tc_columns
-    )[tc_columns].copy()
+    )
 
     _tableWeekly['Schedule ex.Factory'] = pd.to_datetime(_tableWeekly['Schedule ex.Factory']).dt.date
 
     _tableSS_3 = None
     if _file_season_3 is not None:
-        _tableSS_3 = pd.read_excel(_file_season_3, sheet_name='Sheet1', dtype=season_dtype)
+        _tableSS_3 = smart_read_excel(
+            _file_season_3,
+            sheet_name='Sheet1',
+            dtype=season_dtype,
+            canonical_cols=season_canonical_cols
+        )
         _tableSS_3 = _tableSS_3[_tableSS_3['Factory Group Code (MF)'] == '213001'].copy()
 
     _filteredSelectionTC['PO Number'] = pad_po_9(_filteredSelectionTC['PO Number'])

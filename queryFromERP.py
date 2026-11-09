@@ -100,18 +100,18 @@ def queryFromERP(_file_path: str, folder_path_bulk: str = r'C:\Compare\Bulk'):
                 try:
                     # 1. Create temp table
                     conn.execute(sqlalchemy.text(get_temp_table_creation_sql()))
-                    print("✓ Temporary table created")
+                    print("[OK] Temporary table created")
 
                     # 2. Insert data in chunks
                     for i, chunk in enumerate(insert_chunks, 1):
                         conn.execute(sqlalchemy.text(chunk))
-                        print(f"✓ Chunk {i}/{len(insert_chunks)} inserted")
+                        print(f"[OK] Chunk {i}/{len(insert_chunks)} inserted")
 
                     # 3. Execute main query
                     main_query = get_main_query_sql()
                     result = pd.read_sql(main_query, conn)
 
-                    print(f"✓ Query completed. Retrieved {len(result)} rows")
+                    print(f"[OK] Query completed. Retrieved {len(result)} rows")
 
                     # Commit transaction
                     trans.commit()
@@ -154,8 +154,8 @@ def queryFromERP(_file_path: str, folder_path_bulk: str = r'C:\Compare\Bulk'):
             # Export to Excel
             results.to_excel(output_path, index=False, engine='openpyxl')
 
-            print(f"✓ Results exported to: {output_path}")
-            print(f"✓ Total rows exported: {len(results)}")
+            print(f"[OK] Results exported to: {output_path}")
+            print(f"[OK] Total rows exported: {len(results)}")
 
             return output_path
 

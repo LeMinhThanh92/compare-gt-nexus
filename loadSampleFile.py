@@ -1,4 +1,3 @@
-from concurrent.futures import ThreadPoolExecutor
 import os
 from decimal import Decimal
 
@@ -6,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from fileConfig import _dtypeSample
+from file_utils import smart_read_excel
 
 TWO_PLACES = Decimal('0.00')
 
@@ -18,28 +18,23 @@ def load_sample_file(_file_import, _file_lo, _file_tc):
     print('Start process sample')
 
     tc_cols = ['PO Number', 'Price Per Unit', 'Total Adjustments', 'Total Document Amount']
+    sample_canonical_cols = ['ORDERNO', 'WORKNO', 'CUSTREQDATE']
 
-    def read_import():
-        return pd.read_excel(_file_import, dtype=_dtypeSample, sheet_name='Sheet1')
+    _tableSample = smart_read_excel(
+        _file_import,
+        dtype=_dtypeSample,
+        sheet_name='Sheet1',
+        canonical_cols=sample_canonical_cols
+    )
+    with pd.ExcelFile(_file_lo, engine='openpyxl') as xls:
+        _filterRows = pd.read_excel(xls, sheet_name=1)
+        _tableLOAvg = pd.read_excel(xls, sheet_name=2)
 
-    def read_lo():
-        with pd.ExcelFile(_file_lo, engine='openpyxl') as xls:
-            s1 = pd.read_excel(xls, sheet_name=1)
-            s2 = pd.read_excel(xls, sheet_name=2)
-        return s1, s2
-
-    def read_tc():
-        df = pd.read_excel(_file_tc, sheet_name=0, usecols=tc_cols)
-        return df[tc_cols].copy()
-
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        fut_import = executor.submit(read_import)
-        fut_lo = executor.submit(read_lo)
-        fut_tc = executor.submit(read_tc)
-
-        _tableSample = fut_import.result()
-        _filterRows, _tableLOAvg = fut_lo.result()
-        _filteredSelectionTC = fut_tc.result()
+    _filteredSelectionTC = smart_read_excel(
+        _file_tc,
+        sheet_name=0,
+        usecols=tc_cols
+    )
 
     _tableSample["TABLETYPE"]: int = 1
     _tableSample["CREATEDBY"]: str = "AD"

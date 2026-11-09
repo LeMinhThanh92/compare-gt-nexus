@@ -12,7 +12,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 
-from fileConfig import _dtypeSample
+from file_utils import smart_read_excel
 
 
 def run_and_check_download(folder_path_download, _file_import, destination_dir, mode='A1A', max_retries=5):
@@ -21,8 +21,8 @@ def run_and_check_download(folder_path_download, _file_import, destination_dir, 
 
     print(mode)
 
-    # Read only the required CUSTREQDATE column once before the retry loop
-    _tableSample = pd.read_excel(
+    # Read only the required CUSTREQDATE column once before the retry loop (with column/sheet normalization)
+    _tableSample = smart_read_excel(
         _file_import,
         dtype={'CUSTREQDATE': str},
         sheet_name='Sheet1',
